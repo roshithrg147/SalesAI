@@ -1,9 +1,308 @@
 {
   "t-shirts": [
-    {"id": "ts-01", "name": "Classic Noir", "price": 25, "sizes": ["S", "M", "L"], "stock": 15},
-    {"id": "ts-02", "name": "Retro Wave", "price": 30, "sizes": ["M", "XL"], "stock": 5}
+    {
+      "id": "ts-01",
+      "name": "Black SOME Logo T-Shirt (White Print)",
+      "price": 25,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 38
+    },
+    {
+      "id": "ts-02",
+      "name": "Purple SOME Logo T-Shirt (White Print)",
+      "price": 25,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 27
+    },
+    {
+      "id": "ts-03",
+      "name": "Dark Green SOME Logo T-Shirt (White Print)",
+      "price": 25,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 45
+    },
+    {
+      "id": "ts-04",
+      "name": "Blue SOME Logo T-Shirt (White Print)",
+      "price": 25,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 19
+    },
+    {
+      "id": "ts-05",
+      "name": "Brown SOME Logo T-Shirt (White Print)",
+      "price": 25,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 32
+    },
+    {
+      "id": "ts-06",
+      "name": "Teal SOME Logo T-Shirt (White Print)",
+      "price": 25,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 21
+    },
+    {
+      "id": "ts-07",
+      "name": "Brown SOME Logo T-Shirt (Blue Print)",
+      "price": 25,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 17
+    },
+    {
+      "id": "ts-08",
+      "name": "Teal SOME Logo T-Shirt (Blue Print)",
+      "price": 25,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 29
+    },
+    {
+      "id": "ts-09",
+      "name": "Mustard Yellow SOME Logo T-Shirt (Embossed)",
+      "price": 28,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 41
+    },
+    {
+      "id": "ts-10",
+      "name": "Pink SOME Logo T-Shirt (Embossed)",
+      "price": 28,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 24
+    },
+    {
+      "id": "ts-11",
+      "name": "Black SOME Logo T-Shirt (Embossed)",
+      "price": 28,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 35
+    },
+    {
+      "id": "ts-12",
+      "name": "Grey SOME Logo T-Shirt (Embossed)",
+      "price": 28,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 16
+    },
+    {
+      "id": "ts-13",
+      "name": "Green Mountain Valley Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 12
+    },
+    {
+      "id": "ts-14",
+      "name": "Pink Revolution Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 8
+    },
+    {
+      "id": "ts-15",
+      "name": "Rust Red Revolution Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 20
+    },
+    {
+      "id": "ts-16",
+      "name": "Black Revolution Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 14
+    },
+    {
+      "id": "ts-17",
+      "name": "Teal Money Heist Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 26
+    },
+    {
+      "id": "ts-18",
+      "name": "Orange Brown Money Heist Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 11
+    },
+    {
+      "id": "ts-19",
+      "name": "Black Money Heist Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 23
+    },
+    {
+      "id": "ts-20",
+      "name": "Rust Red Word Smith Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 9
+    },
+    {
+      "id": "ts-21",
+      "name": "Black Word Smith Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 18
+    },
+    {
+      "id": "ts-22",
+      "name": "Green Word Smith Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 7
+    },
+    {
+      "id": "ts-23",
+      "name": "Pink Mountain Valley Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 31
+    },
+    {
+      "id": "ts-24",
+      "name": "Brown Mountain Valley Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 10
+    },
+    {
+      "id": "ts-25",
+      "name": "Black Altered Reality Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 39
+    },
+    {
+      "id": "ts-26",
+      "name": "Purple Altered Reality Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 42
+    },
+    {
+      "id": "ts-27",
+      "name": "Dark Green Altered Reality Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 33
+    },
+    {
+      "id": "ts-28",
+      "name": "Blue Scoone Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 47
+    },
+    {
+      "id": "ts-29",
+      "name": "Teal Scoone Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 49
+    },
+    {
+      "id": "ts-30",
+      "name": "Brown Scoone Graphic T-Shirt",
+      "price": 30,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 48
+    }
   ],
-  "jackets": [
-    {"id": "jk-01", "name": "Urban Bomber", "price": 85, "sizes": ["L", "XL"], "stock": 2}
+  "jackets": [],
+  "other_categories": [
+    {
+      "id": "sw-01",
+      "name": "Mustard Yellow SOME Logo Sweatshirt (Embossed)",
+      "price": 60,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 13
+    },
+    {
+      "id": "sw-02",
+      "name": "Maroon SOME Logo Sweatshirt (Embossed)",
+      "price": 60,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 25
+    },
+    {
+      "id": "sw-03",
+      "name": "Dark Green SOME Logo Sweatshirt (Embossed)",
+      "price": 60,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 6
+    },
+    {
+      "id": "sw-04",
+      "name": "Pink SOME Logo Sweatshirt (Embossed)",
+      "price": 60,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 30
+    },
+    {
+      "id": "sw-05",
+      "name": "Olive Green SOME Logo Sweatshirt (Embossed)",
+      "price": 60,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 15
+    },
+    {
+      "id": "sp-01",
+      "name": "Mustard Yellow Sweatpants",
+      "price": 50,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 40
+    },
+    {
+      "id": "sp-02",
+      "name": "Dark Green Sweatpants",
+      "price": 50,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 22
+    },
+    {
+      "id": "sp-03",
+      "name": "Pink Sweatpants",
+      "price": 50,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 34
+    },
+    {
+      "id": "sp-04",
+      "name": "Olive Green Sweatpants",
+      "price": 50,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 46
+    },
+    {
+      "id": "sp-05",
+      "name": "Maroon Sweatpants",
+      "price": 50,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 37
+    },
+    {
+      "id": "sh-01",
+      "name": "Pink Sweat Shorts",
+      "price": 40,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 50
+    },
+    {
+      "id": "sh-02",
+      "name": "Mustard Yellow Sweat Shorts",
+      "price": 40,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 44
+    },
+    {
+      "id": "sh-03",
+      "name": "Olive Green Sweat Shorts",
+      "price": 40,
+      "sizes": ["S", "M", "L", "XL"],
+      "stock": 36
+    }
   ]
 }
