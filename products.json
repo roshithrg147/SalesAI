@@ -1,0 +1,9 @@
+{
+  "t-shirts": [
+    {"id": "ts-01", "name": "Classic Noir", "price": 25, "sizes": ["S", "M", "L"], "stock": 15},
+    {"id": "ts-02", "name": "Retro Wave", "price": 30, "sizes": ["M", "XL"], "stock": 5}
+  ],
+  "jackets": [
+    {"id": "jk-01", "name": "Urban Bomber", "price": 85, "sizes": ["L", "XL"], "stock": 2}
+  ]
+}
