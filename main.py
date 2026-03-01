@@ -1,12 +1,11 @@
+import sys
+import threading
+import time
 from playwright.sync_api import sync_playwright
-
-# Initialize the Gemini Client
-# Make sure you have export GOOGLE_API_KEY='your-key-here' in your terminal
-# client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
 
 def login_and_save():
     with sync_playwright() as p:
-        context = p.chromium.launch_persistant_context(
+        context = p.chromium.launch_persistent_context(
             user_data_dir="./ig_session",
             headless=False
         )
@@ -20,5 +19,37 @@ def login_and_save():
         
         context.close()
 
+def dm_polling_loop():
+    """Mock background loop that continuously checks for new Instagram DMs."""
+    print("Starting DM Polling Loop background thread...")
+    while True:
+        # In a real scenario, this would use Playwright to read inbox and brain.py to reply
+        # print("Polling for new Instagram DMs...")
+        time.sleep(300) # Poll every 5 minutes
+
+def run_app():
+    # Start the background DM polling thread
+    dm_thread = threading.Thread(target=dm_polling_loop, daemon=True)
+    dm_thread.start()
+    
+    # Start the scheduler on the main thread
+    from scheduler import start_scheduler
+    start_scheduler()
+
 if __name__ == "__main__":
-    login_and_save()
+    if len(sys.argv) > 1:
+        command = sys.argv[1]
+        if command == "login":
+            login_and_save()
+        elif command == "post-now":
+            from scheduler import run_posting_job
+            run_posting_job()
+        elif command == "schedule" or command == "run":
+            run_app()
+        else:
+            print(f"Unknown command: {command}")
+            print("Usage: python3 main.py [login|post-now|run]")
+    else:
+        print("Usage: python3 main.py [login|post-now|run]")
+        print("Running login by default...")
+        login_and_save()
