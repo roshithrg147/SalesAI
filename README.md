@@ -8,7 +8,7 @@ This project leverages the **Gemini 2.5 Flash / Veo APIs** to generate high-conv
 
 ## 🚀 Key Features & Architecture
 
-After a comprehensive CTO audit, SalesAI has been deeply refactored into a production-ready package architecture:
+After a comprehensive CTO audit, HypeMind has been deeply refactored into a production-ready package architecture:
 
 - `config.py`: Centralized configuration and logging.
 - `db/`: Handles the Ground Truth JSON catalog generation (`generate_db.py`) and retrieval.
@@ -33,9 +33,9 @@ Auto-cleans up generated video files (`promo_video.mp4`, `ad_video.mp4`) instant
 
 1.  **Python 3.8+**
 2.  **API Keys**: You must have `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) set in your environment or a `.env` file.
-3.  **Playwright**: Install the browser engines:
+3.  **Dependencies**: Install the required Python packages and Playwright browser engines:
     ```bash
-    pip install playwright
+    pip install -r requirements.txt
     playwright install chromium
     ```
 

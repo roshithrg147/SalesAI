@@ -47,4 +47,4 @@ def setup_logger(name):
         
     return logger
 
-logger = setup_logger("SalesAI")
+logger = setup_logger("HypeMind")

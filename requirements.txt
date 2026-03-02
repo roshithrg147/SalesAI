@@ -1,0 +1,13 @@
+# Core Dependencies
+google-genai>=0.2.0
+playwright>=1.41.0
+schedule>=1.2.0
+python-dotenv>=1.0.1
+
+# Data Validation
+pydantic>=2.5.0
+
+# Video & Asset Generation
+moviepy>=1.0.3
+Pillow>=10.2.0
+numpy>=1.26.0
