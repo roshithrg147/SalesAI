@@ -46,10 +46,27 @@ if __name__ == "__main__":
             run_posting_job()
         elif command == "schedule" or command == "run":
             run_app()
+        elif command == "generate-video":
+            from video_generator import generate_promotional_video
+            generate_promotional_video()
+        elif command == "post-video":
+            from ig_poster import upload_post
+            caption = "Check out our latest collection! 🧥🔥 Shop now at the link in our bio. #StreetwearIndia #Fashion #NewArrivals"
+            upload_post("promo_video.mp4", caption)
+        elif command == "generate-ad":
+            from gemini_video_ad import generate_video_ad
+            from ig_poster import upload_post
+            video_file = generate_video_ad("video/ad_video.mp4")
+            if video_file:
+                 caption = "Elevate your streetwear game. 🌟 Crisp, clean, and built for the city. Tap the link in our bio! #StreetwearIndia #Luxurystreetwear #OOTD #FreshDrops"
+                 print(f"Video {video_file} complete. Automatically posting to Instagram...")
+                 upload_post(video_file, caption)
+            else:
+                 print("Failed to generate or download the video ad.")
         else:
             print(f"Unknown command: {command}")
-            print("Usage: python3 main.py [login|post-now|run]")
+            print("Usage: python3 main.py [login|post-now|run|generate-video|post-video|generate-ad]")
     else:
-        print("Usage: python3 main.py [login|post-now|run]")
+        print("Usage: python3 main.py [login|post-now|run|generate-video|post-video|generate-ad]")
         print("Running login by default...")
         login_and_save()
