@@ -1,0 +1,39 @@
+# Virtual Environments
+venv/
+env/
+.env
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Playwright & Browser Sessions
+ig_session/
+test_screenshot.png
+error_screenshot.png
+
+# Media Files (Images, Videos) generated or used by script
+*.mp4
+*.mkv
+*.webm
+*.avi
+*.jpg
+*.jpeg
+*.png
+*.gif
+Img-2026*/
+High_End_Product_Video_Ad_Generation.mp4
+promo_video.mp4
+
+# Test & Debug Scripts
+test_ig.py
+
+# Database / SQLite
+*.sqlite3
+*.db
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
