@@ -19,13 +19,18 @@ class Config:
     # Paths
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     IMG_DIR = os.environ.get("IMG_DIR", os.path.join(BASE_DIR, "Img-20260301T182942Z-1-001/Img"))
+    
+    # SECURITY NOTE: IG_SESSION_DIR contains sensitive auth cookies. 
+    # In AWS/production, ensure this is mapped to a secure, encrypted volume or Secrets Manager.
     IG_SESSION_DIR = os.environ.get("IG_SESSION_DIR", os.path.join(BASE_DIR, "ig_session"))
+    
     DB_DIR = os.path.join(BASE_DIR, 'db')
     PRODUCTS_JSON_PATH = os.path.join(DB_DIR, 'products.json')
     
     # App Settings
     LOGGING_LEVEL = os.environ.get("LOGGING_LEVEL", "INFO")
     POLL_INTERVAL_SECONDS = int(os.environ.get("POLL_INTERVAL_SECONDS", "300"))
+    MAX_DMS_PER_CYCLE = int(os.environ.get("MAX_DMS_PER_CYCLE", "5"))
     
     # Playwright Settings
     PLAYWRIGHT_HEADLESS = os.environ.get("PLAYWRIGHT_HEADLESS", "False").lower() in ('true', '1', 't')

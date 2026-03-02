@@ -48,46 +48,51 @@ def run_dm_scraper():
 
             logger.info(f"Found {count} unread DM thread(s).")
             
-            # We process only the top one per cycle to avoid blocking the background thread too long
-            # and to mimic human behavior.
-            thread_to_read = unread_threads.first
-            thread_to_read.click()
+            # We process up to MAX_DMS_PER_CYCLE per cycle to prevent high-volume backlogs
+            max_to_process = min(count, Config.MAX_DMS_PER_CYCLE)
+            logger.info(f"Processing up to {max_to_process} thread(s) this cycle.")
             
-            # Wait for the message history window to load. We look for the message input box.
-            message_input = page.locator("div[aria-label='Message']")
-            message_input.wait_for(state="visible")
-            
-            # Scrape the latest messages from the other user.
-            # Instagram messages are typically div boxes with text. We grab the last (most recent) one.
-            # There are several ways to structure this; we look for the main message bubbles.
-            messages = page.locator("div[dir='auto']").all_inner_texts()
-            if not messages:
-                logger.warning("Clicked thread but could not extract message text.")
-                return
+            for i in range(max_to_process):
+                # Re-query unread threads because DOM is dynamic and changes after navigating
+                unread_threads = page.locator("a[href^='/direct/t/']").filter(has_text="Unread")
+                if unread_threads.count() == 0:
+                    break
+                    
+                thread_to_read = unread_threads.first
+                thread_to_read.click()
                 
-            latest_msg_text = messages[-1]
-            logger.info(f"Latest incoming message: '{latest_msg_text}'")
-            
-            # Pass to SalesAI Brain
-            logger.info("Querying SalesAI Brain...")
-            agent_decision = process_message(latest_msg_text)
-            
-            if agent_decision.needs_human:
-                logger.warning(f"SalesAI flagged thread for human intervention. Intent: {agent_decision.intent}")
-                # We do not reply, leaving it for the human operator. 
-                # (Optionally we could send an auto-responder "A human will be with you shortly")
-                return
+                # Wait for the message history window to load
+                message_input = page.locator("div[aria-label='Message']")
+                message_input.wait_for(state="visible")
                 
-            if agent_decision.response_text:
-                logger.info(f"SalesAI Decision: {agent_decision.intent}. Replying...")
-                message_input.fill(agent_decision.response_text)
+                # Scrape the latest messages
+                messages = page.locator("div[dir='auto']").all_inner_texts()
+                if not messages:
+                    logger.warning("Clicked thread but could not extract message text.")
+                    page.goto("https://www.instagram.com/direct/inbox/")
+                    page.wait_for_selector("div[role='main']", state="visible")
+                    continue
+                    
+                latest_msg_text = messages[-1]
+                logger.info(f"Latest incoming message: '{latest_msg_text}'")
                 
-                # Press enter to send
-                message_input.press("Enter")
-                logger.info("Message sent successfully.")
+                # Pass to SalesAI Brain
+                logger.info("Querying SalesAI Brain...")
+                agent_decision = process_message(latest_msg_text)
                 
-            # Optional: Add human-like jitter before closing
-            time.sleep(2)
+                if agent_decision.needs_human:
+                    logger.warning(f"SalesAI flagged thread for human intervention. Intent: {agent_decision.intent}")
+                    # We skip replying so a human can take over
+                elif agent_decision.response_text:
+                    logger.info(f"SalesAI Decision: {agent_decision.intent}. Replying...")
+                    message_input.fill(agent_decision.response_text)
+                    message_input.press("Enter")
+                    logger.info("Message sent successfully.")
+                    time.sleep(2)
+                    
+                # Navigate back to inbox for the next iteration
+                page.goto("https://www.instagram.com/direct/inbox/")
+                page.wait_for_selector("div[role='main']", state="visible")
 
         except Exception as e:
             logger.error(f"Error during DM scraping automation: {e}", exc_info=True)

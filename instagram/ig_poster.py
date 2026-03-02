@@ -5,6 +5,7 @@
 
 import os
 import time
+import re
 from datetime import datetime
 from playwright.sync_api import sync_playwright
 
@@ -36,9 +37,9 @@ def upload_post(image_path, caption):
             
             # 1. Click "New post" (Create)
             try:
-                page.get_by_role("link", name="New post").click()
+                page.get_by_role("link", name=re.compile(r"New post|Create", re.IGNORECASE)).click()
             except:
-                page.locator("svg[aria-label='New post']").first.click()
+                page.locator("svg[aria-label='New post'], svg[aria-label='Create']").first.click()
             
             # Wait for modal to appear
             page.wait_for_selector("div[role='dialog']", state="visible")
@@ -64,7 +65,7 @@ def upload_post(image_path, caption):
             else:
                 logger.info("Using expect_file_chooser upload.")
                 with page.expect_file_chooser() as fc_info:
-                    page.get_by_role("button", name="Select from computer").click()
+                    page.get_by_role("button", name=re.compile(r"Select from computer|Select files", re.IGNORECASE)).click()
                 file_chooser = fc_info.value
                 file_chooser.set_files(abs_image_path)
                 
