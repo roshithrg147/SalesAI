@@ -1,7 +1,7 @@
 import os
 import random
 from moviepy import ImageSequenceClip
-from database import get_product_context
+from db.database import get_product_context
 
 def get_valid_images(img_dir="Img-20260301T182942Z-1-001/Img"):
     if not os.path.exists(img_dir):

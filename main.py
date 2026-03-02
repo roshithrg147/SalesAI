@@ -1,3 +1,4 @@
+import os
 import sys
 import threading
 import time
@@ -23,7 +24,7 @@ def dm_polling_loop():
     """Mock background loop that continuously checks for new Instagram DMs."""
     print("Starting DM Polling Loop background thread...")
     while True:
-        # In a real scenario, this would use Playwright to read inbox and brain.py to reply
+        # In a real scenario, this would use Playwright to read inbox and ai.brain to reply
         # print("Polling for new Instagram DMs...")
         time.sleep(300) # Poll every 5 minutes
 
@@ -33,7 +34,7 @@ def run_app():
     dm_thread.start()
     
     # Start the scheduler on the main thread
-    from scheduler import start_scheduler
+    from core.scheduler import start_scheduler
     start_scheduler()
 
 if __name__ == "__main__":
@@ -42,25 +43,31 @@ if __name__ == "__main__":
         if command == "login":
             login_and_save()
         elif command == "post-now":
-            from scheduler import run_posting_job
+            from core.scheduler import run_posting_job
             run_posting_job()
         elif command == "schedule" or command == "run":
             run_app()
         elif command == "generate-video":
-            from video_generator import generate_promotional_video
+            from content.video_generator import generate_promotional_video
             generate_promotional_video()
         elif command == "post-video":
-            from ig_poster import upload_post
+            from instagram.ig_poster import upload_post
             caption = "Check out our latest collection! 🧥🔥 Shop now at the link in our bio. #StreetwearIndia #Fashion #NewArrivals"
             upload_post("promo_video.mp4", caption)
+            if os.path.exists("promo_video.mp4"):
+                os.remove("promo_video.mp4")
+                print("Cleaned up promo_video.mp4")
         elif command == "generate-ad":
-            from gemini_video_ad import generate_video_ad
-            from ig_poster import upload_post
+            from content.gemini_video_ad import generate_video_ad
+            from instagram.ig_poster import upload_post
             video_file = generate_video_ad("video/ad_video.mp4")
             if video_file:
                  caption = "Elevate your streetwear game. 🌟 Crisp, clean, and built for the city. Tap the link in our bio! #StreetwearIndia #Luxurystreetwear #OOTD #FreshDrops"
                  print(f"Video {video_file} complete. Automatically posting to Instagram...")
                  upload_post(video_file, caption)
+                 if os.path.exists(video_file):
+                     os.remove(video_file)
+                     print(f"Cleaned up {video_file}")
             else:
                  print("Failed to generate or download the video ad.")
         else:

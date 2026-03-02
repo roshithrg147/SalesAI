@@ -69,7 +69,9 @@ def main():
         text = text.strip()
             
         print("Writing to products.json...")
-        with open('products.json', 'w') as f:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(current_dir, 'products.json')
+        with open(file_path, 'w') as f:
             f.write(text)
         print("Successfully generated products.json")
     except Exception as e:

@@ -2,7 +2,7 @@ import os
 import random
 import json
 from google import genai
-from database import get_product_context
+from db.database import get_product_context
 
 def draft_post():
     api_key = os.environ.get("GEMINI_API_KEY")

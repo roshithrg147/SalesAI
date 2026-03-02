@@ -1,6 +1,6 @@
 import openai  # or your preferred LLM provider
-from models import AgentDecision
-from database import get_product_context
+from db.models import AgentDecision
+from db.database import get_product_context
 
 def process_message(user_text):
     product_info = get_product_context()

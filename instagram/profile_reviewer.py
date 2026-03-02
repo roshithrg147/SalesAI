@@ -3,7 +3,7 @@ import os
 import json
 from playwright.sync_api import sync_playwright
 from google import genai
-from database import get_product_context
+from db.database import get_product_context
 
 def extract_profile_data(username: str) -> dict:
     profile_data = {"username": username}

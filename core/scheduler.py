@@ -2,8 +2,8 @@ import time
 import schedule
 import os
 from datetime import datetime
-from post_generator import draft_post
-from ig_poster import upload_post
+from content.post_generator import draft_post
+from instagram.ig_poster import upload_post
 
 def run_posting_job():
     print(f"[{datetime.now()}] Starting daily posting job...")
