@@ -1,64 +1,90 @@
-# SalesAI Director: Streetwear Social Media & Sales Agent
+# HypeMind: Streetwear Social Media & Sales Agent
 
-Welcome to **SalesAI**, your AI-powered lead strategist for streetwear social media and direct message sales.
+**Developer:** Mr. R.
 
-This project leverages the **Gemini 2.5 Flash API** to generate high-converting Instagram posts, and **Playwright** to automate their publication on your account. The AI acts as your "SalesAI Director," possessing dual identities tailored to distinct tasks.
+Welcome to **HypeMind**, your fully automated, AI-powered lead strategist for streetwear social media and direct message sales.
 
-## 🚀 Key Features
+This project leverages the **Gemini 2.5 Flash / Veo APIs** to generate high-converting Instagram posts/videos and **Playwright** to headlessly automate their publication and handle customer DMs.
 
-### 1. The Dual-Role Agent Architecture
+## 🚀 Key Features & Architecture
 
-The core logic resides in `brain.py` and `post_generator.py`, where the AI receives sophisticated instructions:
+After a comprehensive CTO audit, SalesAI has been deeply refactored into a production-ready package architecture:
 
-- **Sales Agent (DM Mode):** Answers customer DMs regarding price, sizing, and stock using a Ground Truth JSON catalog (`products.json`). Focuses on converting inquiries via checkout URLs and flags complex human interactions.
-- **Content Creator (Post Mode):** Analyzes raw product images to generate viral Instagram captions following the 'AIDA' (Attention, Interest, Desire, Action) framework, specific hashtags, and the brand's energetic, emoji-friendly voice.
+- `config.py`: Centralized configuration and logging.
+- `db/`: Handles the Ground Truth JSON catalog generation (`generate_db.py`) and retrieval.
+- `ai/`: Contains the `brain.py` which uses Gemini Structured Outputs (Pydantic) to strictly route customer intent.
+- `instagram/`: Robust Playwright automation to upload posts (`ig_poster.py`) and scrape/reply to DMs (`dm_scraper.py`).
+- `content/`: AI generation pipelines for static image posts, promotional video compilations, and Veo cinematic ads.
+- `core/`: Application loops and schedulers.
 
-### 2. Instagram Automation
+### 1. Sales Agent (DM Mode)
 
-Built natively with Playwright (`ig_poster.py`), the program logs into Instagram, saves the session securely in an `ig_session` directory, and drives the browser UI to upload images, write captions, and publish posts—entirely hands-free.
+The `dm_scraper` continuously polls your Instagram inbox in the background. When a new message arrives, the `brain` analyzes it against the product catalog. If the intent is a sale, it automatically replies with checkout links. Complex issues are flagged for human review.
 
-### 3. Automated Daily Publishing Loop
+### 2. Content Creator (Post Mode)
 
-The `scheduler.py` runs an infinite loop that drafts a post (random image + Gemini caption) and publishes it via Playwright once every 24 hours.
+Analyzes raw product images to generate viral Instagram captions following the 'AIDA' framework. It can also generate 5-10 second hyper-realistic ad videos using Gemini's video generation capabilities.
+
+### 3. Automated Setup
+
+Auto-cleans up generated video files (`promo_video.mp4`, `ad_video.mp4`) instantly after they are successfully published to save disk space.
 
 ## 🛠 Prerequisites
 
 1.  **Python 3.8+**
-2.  **Google Gemini API Key**: Set as an environment variable (`export GOOGLE_API_KEY='your-key-here'`).
-3.  **Playwright Browsers**: Ensure Playwright is installed (`pip install playwright` and `playwright install`).
-4.  **Product Data**: Make sure the `products.json` file is populated (via `generate_db.py`) and images exist in `Img-20260301T182942Z-1-001/Img`.
+2.  **API Keys**: You must have `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) set in your environment or a `.env` file.
+3.  **Playwright**: Install the browser engines:
+    ```bash
+    pip install playwright
+    playwright install chromium
+    ```
+
+## ⚙️ Configuration (`config.py` / `.env`)
+
+You can customize the bot's behavior by creating a `.env` file in the root directory:
+
+```env
+GEMINI_API_KEY=your_key_here
+IMG_DIR=/path/to/your/raw/images
+LOGGING_LEVEL=INFO
+POLL_INTERVAL_SECONDS=300
+PLAYWRIGHT_HEADLESS=False
+PLAYWRIGHT_TIMEOUT=30000
+```
 
 ## 🎮 How to Use
 
-The application uses `main.py` as the unified entry point. You must **always authenticate first** before attempting to post.
+The application uses `main.py` as the unified command-line orchestrator.
 
-### Step 1: Login (Required once)
+### Authentication (Required Once)
 
-Launch a visible browser window where you can manually log into your Instagram account. Your session data will be saved so you won't have to log in again.
+Launch a visible browser window to manually log into your Instagram account.
 
 ```bash
 python3 main.py login
 ```
 
-_(After logging in, press Enter in the terminal to save the session)._
+_(Press Enter in the terminal to save the session state once you see your inbox)._
 
-### Step 2: Instant Test Post
+### Run the Background Daemon
 
-Run a single generation and upload cycle to verify the Playwright flow and Gemini captions.
-
-```bash
-python3 main.py post-now
-```
-
-### Step 3: Start the Daily Scheduler
-
-Launch the background job that will continuously run a post generation and upload cycle every 24 hours. This terminal must be left open (or run in a background daemon like `screen` or `tmux`).
+Starts the automated scheduler (posts daily at 10 AM) AND the background DM scraper loop (polls inbox every 5 minutes).
 
 ```bash
-python3 main.py schedule
+python3 main.py run
 ```
+
+### Manual Trigger Commands
+
+Force the agent to execute specific actions immediately:
+
+- **`python3 main.py post-now`**: Drafts a post from a random image and uploads it.
+- **`python3 main.py generate-video`**: Compiles static images into a `promo_video.mp4`.
+- **`python3 main.py post-video`**: Uploads the promo video with a generated caption.
+- **`python3 main.py generate-ad`**: Uses Veo to generate a cinematic ad and auto-posts it, then cleans up the file.
 
 ## 🔒 Safety & Guardrails
 
-- **Prompt Injection Defense:** The agent is instructed to block attempts to access admin features or change instructions.
-- **No Hallucinations:** The agent is explicitly told to rely _only_ on the provided `products.json` data and to flag humans for missing stock.
+- **Prompt Injection Defense:** The agent is instructed to block attempts to access admin features.
+- **Structured Outputs:** The AI strictly adheres to the `AgentDecision` schema, preventing hallucinations and formatting errors.
+- **Error Recovery:** Playwright operations capture DOM screenshots (`failure_*.png`) if an element goes missing, aiding in headless debugging.

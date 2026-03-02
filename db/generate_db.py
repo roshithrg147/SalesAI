@@ -1,35 +1,45 @@
+# ==========================================
+# Developer: Mr. R.
+# Project:   HypeMind
+# ==========================================
+
 import os
 import json
 from google import genai
+from config import Config, setup_logger
+
+logger = setup_logger("db.generate")
 
 def main():
-    api_key = os.environ.get("GOOGLE_API_KEY")
-    if not api_key:
-        print("GOOGLE_API_KEY not found in environment. Please set it.")
+    if not Config.GOOGLE_API_KEY:
+        logger.error("GOOGLE_API_KEY not found in environment. Please set it in .env or via export.")
         return
 
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=Config.GOOGLE_API_KEY)
     
-    img_dir = "Img-20260301T182942Z-1-001/Img"
-    all_files = os.listdir(img_dir)
+    if not os.path.exists(Config.IMG_DIR):
+        logger.error(f"Image directory {Config.IMG_DIR} does not exist. Please place images there.")
+        return
+        
+    all_files = os.listdir(Config.IMG_DIR)
     # Filter out duplicate labels like (1), (2)
     unique_files = [f for f in all_files if f.endswith(".jpg") and "(" not in f]
     unique_files.sort()
     
-    print(f"Found {len(unique_files)} unique images.")
+    logger.info(f"Found {len(unique_files)} unique images.")
     
-    files_to_upload = [os.path.join(img_dir, f) for f in unique_files]
+    files_to_upload = [os.path.join(Config.IMG_DIR, f) for f in unique_files]
     uploaded_files = []
     
-    print("Uploading images to Gemini...")
+    logger.info("Uploading images to Gemini...")
     for f in files_to_upload:
         try:
             uploaded_file = client.files.upload(file=f)
             uploaded_files.append(uploaded_file)
         except Exception as e:
-            print(f"Failed to upload {f}: {e}")
+            logger.error(f"Failed to upload {f}: {e}")
             
-    print("Generating product catalog JSON...")
+    logger.info("Generating product catalog JSON...")
     
     prompt = """
     You are an expert cataloger. I have provided you with several images of clothing items.
@@ -68,14 +78,12 @@ def main():
             text = text[:-3]
         text = text.strip()
             
-        print("Writing to products.json...")
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(current_dir, 'products.json')
-        with open(file_path, 'w') as f:
+        logger.info(f"Writing to {Config.PRODUCTS_JSON_PATH}...")
+        with open(Config.PRODUCTS_JSON_PATH, 'w') as f:
             f.write(text)
-        print("Successfully generated products.json")
+        logger.info(f"Successfully generated {Config.PRODUCTS_JSON_PATH}")
     except Exception as e:
-        print(f"Error generating JSON: {e}")
+        logger.error(f"Error generating JSON: {e}", exc_info=True)
 
 if __name__ == "__main__":
     main()

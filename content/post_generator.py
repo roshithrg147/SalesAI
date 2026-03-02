@@ -1,19 +1,30 @@
+# ==========================================
+# Developer: Mr. R.
+# Project:   HypeMind
+# ==========================================
+
 import os
 import random
 import json
+import time
 from google import genai
 from db.database import get_product_context
+from config import Config, setup_logger
+
+logger = setup_logger("content.post_generator")
 
 def draft_post():
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        api_key = os.environ.get("GOOGLE_API_KEY")
+    api_key = Config.GEMINI_API_KEY
     if not api_key:
         raise ValueError("GEMINI_API_KEY not found in environment. Please set it.")
 
     client = genai.Client(api_key=api_key)
     
-    img_dir = "Img-20260301T182942Z-1-001/Img"
+    img_dir = Config.IMG_DIR
+    if not os.path.exists(img_dir):
+        logger.error(f"Image directory {img_dir} not found.")
+        return None, None
+        
     all_files = os.listdir(img_dir)
     # Filter out duplicate labels
     unique_files = [f for f in all_files if f.endswith(".jpg") and "(" not in f]
@@ -24,7 +35,7 @@ def draft_post():
     random_img = random.choice(unique_files)
     img_path = os.path.join(img_dir, random_img)
     
-    print(f"Selected image: {img_path}")
+    logger.info(f"Selected image: {img_path}")
     
     product_context = get_product_context()
     
@@ -65,46 +76,56 @@ Then, write a viral Instagram caption for this product based on your SALESAI DIR
 Return ONLY valid JSON.
 """
 
-    try:
-        print(f"Uploading {random_img} to Gemini...")
-        uploaded_file = client.files.upload(file=img_path)
-        
-        print("Generating caption...")
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[uploaded_file, prompt]
-        )
-        
-        # Clean up the file
+    max_retries = 3
+    base_wait = 4
+    
+    for attempt in range(max_retries):
         try:
-           client.files.delete(name=uploaded_file.name)
-        except Exception as e:
-           print(f"Failed to delete {uploaded_file.name}: {e}")
-
-        text = response.text.strip()
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.startswith("```"):
-            text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        text = text.strip()
+            logger.info(f"Uploading {random_img} to Gemini (Attempt {attempt+1}/{max_retries})...")
+            uploaded_file = client.files.upload(file=img_path)
             
-        data = json.loads(text)
-        
-        return img_path, data
-        
-    except Exception as e:
-        print(f"Error generating post: {e}")
-        return img_path, None
+            logger.info("Generating caption...")
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=[uploaded_file, prompt]
+            )
+            
+            # Clean up the file
+            try:
+               client.files.delete(name=uploaded_file.name)
+            except Exception as e:
+               logger.warning(f"Failed to delete {uploaded_file.name}: {e}")
+    
+            text = response.text.strip()
+            if text.startswith("```json"):
+                text = text[7:]
+            if text.startswith("```"):
+                text = text[3:]
+            if text.endswith("```"):
+                text = text[:-3]
+            text = text.strip()
+                
+            data = json.loads(text)
+            
+            return img_path, data
+            
+        except Exception as e:
+            logger.error(f"Error generating post: {e}")
+            if attempt < max_retries - 1:
+                sleep_time = base_wait * (2 ** attempt)
+                logger.info(f"Retrying in {sleep_time} seconds...")
+                time.sleep(sleep_time)
+            else:
+                logger.error("Max retries exceeded. Drafting post failed.")
+                return img_path, None
 
 if __name__ == "__main__":
     img, data = draft_post()
-    print("\n--- GENERATED POST ---")
-    print(f"Image: {img}")
+    logger.info("\n--- GENERATED POST ---")
+    logger.info(f"Image: {img}")
     if data:
-        print(f"Product: {data.get('product_name')} ({data.get('product_id')})")
-        print("Caption:")
-        print(data.get("caption"))
+        logger.info(f"Product: {data.get('product_name')} ({data.get('product_id')})")
+        logger.info("Caption:")
+        logger.info(data.get("caption"))
     else:
-        print("Failed to generate data.")
+        logger.error("Failed to generate data.")

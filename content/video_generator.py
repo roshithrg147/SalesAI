@@ -1,3 +1,8 @@
+# ==========================================
+# Developer: Mr. R.
+# Project:   HypeMind
+# ==========================================
+
 import os
 import random
 from moviepy import ImageSequenceClip

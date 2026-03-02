@@ -1,3 +1,8 @@
+# ==========================================
+# Developer: Mr. R.
+# Project:   HypeMind
+# ==========================================
+
 import time
 import schedule
 import os
