@@ -8,19 +8,57 @@ import random
 from moviepy import ImageSequenceClip
 from db.database import get_product_context
 
-def get_valid_images(img_dir="Img-20260301T182942Z-1-001/Img"):
-    if not os.path.exists(img_dir):
-        print(f"Directory {img_dir} does not exist.")
+import tempfile
+import uuid
+import boto3
+from config import Config
+
+def get_valid_images_from_s3(required_count=15):
+    bucket_name = Config.S3_BUCKET
+    s3_client = boto3.client('s3')
+    
+    try:
+        response = s3_client.list_objects_v2(Bucket=bucket_name)
+        if 'Contents' not in response:
+            print(f"S3 Bucket {bucket_name} is empty or inaccessible.")
+            return []
+            
+        all_files = [obj['Key'] for obj in response['Contents']]
+    except Exception as e:
+        print(f"Failed to list objects in S3 bucket {bucket_name}: {e}")
+        return []
+
+    # Filter for jpegs and exclude duplicates
+    unique_files = [f for f in all_files if f.endswith(".jpg") and "(" not in f]
+    
+    if not unique_files:
+        print(f"No valid images found in S3 bucket {bucket_name}")
         return []
     
-    all_files = os.listdir(img_dir)
-    # Filter out duplicate labels
-    return [os.path.join(img_dir, f) for f in all_files if f.endswith(".jpg") and "(" not in f]
+    # Download to standard ephemeral storage
+    temp_dir = os.path.join(tempfile.gettempdir(), "hypemind_video")
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    selected_keys = random.sample(unique_files, min(len(unique_files), required_count))
+    downloaded_paths = []
+    
+    for key in selected_keys:
+        temp_img_path = os.path.join(temp_dir, f"{uuid.uuid4()}_{os.path.basename(key)}")
+        try:
+            s3_client.download_file(bucket_name, key, temp_img_path)
+            downloaded_paths.append(temp_img_path)
+        except Exception as e:
+            print(f"Failed to download {key} from S3: {e}")
+            
+    return downloaded_paths
 
 def generate_promotional_video(output_filename="promo_video.mp4", duration=30):
     print(f"Starting video generation. Target duration: {duration}s")
     
-    image_paths = get_valid_images()
+    time_per_image = 2
+    required_images = duration // time_per_image
+    
+    image_paths = get_valid_images_from_s3(required_count=required_images)
     
     if not image_paths:
         print("No valid images found to generate a video.")
@@ -82,6 +120,14 @@ def generate_promotional_video(output_filename="promo_video.mp4", duration=30):
         print("Video generation complete!")
     except Exception as e:
         print(f"Failed to generate video: {e}")
+    finally:
+        # Cleanup temporary images
+        for img_path in image_paths:
+            try:
+                if os.path.exists(img_path):
+                    os.remove(img_path)
+            except Exception as e:
+                print(f"Failed to clean up {img_path}: {e}")
 
 if __name__ == "__main__":
     generate_promotional_video()

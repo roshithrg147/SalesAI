@@ -84,11 +84,12 @@ def upload_post(image_path, caption):
             
             # 3. Click "Next" (Crop screen)
             next_btn = page.get_by_role("button", name="Next")
+            next_btn.wait_for(state="visible")
             next_btn.click()
             
             # Wait for filter screen to load and Next to be interactable again
-            # We can check a UI indicator of the filter screen, or just wait for network idle
-            page.wait_for_load_state("networkidle")
+            # We explicitly wait for the Next button to be visible again instead of networkidle
+            page.get_by_role("button", name="Next").wait_for(state="visible")
             
             # 4. Click "Next" (Filter screen)
             page.get_by_role("button", name="Next").click()
@@ -122,7 +123,7 @@ def upload_post(image_path, caption):
             screenshot_path = f"failure_ig_poster_{timestamp}.png"
             # Fallback screenshot handler
             if 'page' in locals():
-                page.screenshot(path=screenshot_path)
+                page.screenshot(path=screenshot_path, full_page=True)
                 logger.error(f"UI state saved to {screenshot_path} for debugging.")
         finally:
             if 'context' in locals():

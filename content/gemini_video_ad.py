@@ -10,7 +10,18 @@ from google import genai
 from google.genai import types
 
 from config import Config, setup_logger
+from content.video_generator import get_valid_images_from_s3
+
 logger = setup_logger("content.gemini_video_ad")
+
+def _cleanup_local_files(paths):
+    logger.info("Cleaning up local temporary S3 downloads...")
+    for img_path in paths:
+        try:
+            if os.path.exists(img_path):
+                os.remove(img_path)
+        except Exception as e:
+            logger.warning(f"Failed to delete local temp file {img_path}: {e}")
 
 def generate_video_ad(output_filename="video/ad_video.mp4"):
     logger.info("Starting Gemini Video Advertisement Generation...")
@@ -22,21 +33,18 @@ def generate_video_ad(output_filename="video/ad_video.mp4"):
     if not api_key:
         raise ValueError("GEMINI_API_KEY not found in environment. Please set it.")
 
+    # Force the SDK to use the passed GEMINI API key instead of an env GOOGLE_API_KEY
+    if 'GOOGLE_API_KEY' in os.environ:
+        del os.environ['GOOGLE_API_KEY']
+        
     client = genai.Client(api_key=api_key)
     
-    img_dir = Config.IMG_DIR
-    if not os.path.exists(img_dir):
-        logger.error(f"Directory {img_dir} does not exist.")
-        return None
-        
-    all_files = [f for f in os.listdir(img_dir) if f.endswith(".jpg") and "(" not in f]
+    # Fetch exactly 3 random images from S3
+    downloaded_img_paths = get_valid_images_from_s3(required_count=3)
     
-    if len(all_files) < 3:
-        logger.error("Not enough images found. Requires at least 3.")
+    if len(downloaded_img_paths) < 3:
+        logger.error("Not enough images found in S3. Requires at least 3.")
         return None
-        
-    # Select exactly 3 random images
-    selected_images = random.sample(all_files, 3)
     uploaded_files = []
     
     max_retries = 3
@@ -44,15 +52,19 @@ def generate_video_ad(output_filename="video/ad_video.mp4"):
     
     for attempt in range(max_retries):
         try:
-            # Upload the selected images
-            logger.info(f"Uploading 3 images to Gemini (Attempt {attempt+1}/{max_retries})...")
-            for img in selected_images:
-                img_path = os.path.join(img_dir, img)
-                logger.info(f"  Uploading: {img}")
-                uploaded_file = client.files.upload(file=img_path)
-                uploaded_files.append(uploaded_file)
-                
-            # Wait briefly for files to be processed by Gemini (best practice)
+            # The developer API requires raw image bytes for reference_images, not gcs_uris
+            image_references = []
+            for img_path in downloaded_img_paths:
+                with open(img_path, 'rb') as f:
+                    img_bytes = f.read()
+                image_references.append(
+                    types.VideoGenerationReferenceImage(
+                        reference_type="ASSET",
+                        image=types.Image(image_bytes=img_bytes)
+                    )
+                )
+
+            # Wait briefly before API call (best practice)
             time.sleep(3)
             
             prompt = """
@@ -75,11 +87,10 @@ def generate_video_ad(output_filename="video/ad_video.mp4"):
                  operation = client.models.generate_videos(
                     model='veo-2.0-generate-001',
                     prompt=prompt,
-                    source_images=uploaded_files,
                     config=types.GenerateVideosConfig(
                          person_generation="ALLOW_ADULT",
                          aspect_ratio="9:16",
-                         output_mime_type="video/mp4"
+                         reference_images=image_references
                     )
                  )
             except AttributeError:
@@ -91,6 +102,7 @@ def generate_video_ad(output_filename="video/ad_video.mp4"):
                     contents=uploaded_files + [prompt]
                  )
                  logger.info(f"Fallback response: {response.text}")
+                 _cleanup_local_files(downloaded_img_paths)
                  return None
                  
             # Wait for the operation to complete
@@ -111,6 +123,7 @@ def generate_video_ad(output_filename="video/ad_video.mp4"):
             urllib.request.urlretrieve(generated_video_url, output_filename)
             
             logger.info(f"Video saved as {output_filename}")
+            _cleanup_local_files(downloaded_img_paths)
             return output_filename
             
         except Exception as e:
@@ -121,11 +134,12 @@ def generate_video_ad(output_filename="video/ad_video.mp4"):
                 time.sleep(sleep_time)
             else:
                 logger.error("Max retries exceeded. Video Ad generation failed.")
+                _cleanup_local_files(downloaded_img_paths)
                 return None
             
         finally:
-            # Clean up uploaded images
-            logger.info("Cleaning up uploaded files...")
+            # Clean up uploaded images from Gemini
+            logger.info("Cleaning up uploaded files from Gemini...")
             for f in uploaded_files:
                 try:
                     client.files.delete(name=f.name)
