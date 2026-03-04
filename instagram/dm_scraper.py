@@ -16,6 +16,32 @@ from ai.brain import process_message
 
 logger = setup_logger("instagram.dm_scraper")
 
+SELECTORS = {
+    "INBOX_URL": "https://www.instagram.com/direct/inbox/",
+    "INBOX_NAV": "nav, [role='navigation'], a[href='/']",
+    "NOT_NOW_BTN": "Not Now|Not now",
+    "THREAD_LINKS": "a[href^='/direct/t/']",
+    "MESSAGE_INPUT": "div[aria-label='Message']",
+    "MESSAGE_TEXTS": "div[dir='auto']"
+}
+
+def safe_click(page, locator, timeout=3000, retries=2):
+    for attempt in range(retries):
+        try:
+            if isinstance(locator, str):
+                el = page.locator(locator).first
+            else:
+                el = locator.first
+            el.wait_for(state="visible", timeout=timeout)
+            el.click()
+            return True
+        except Exception as e:
+            if attempt < retries - 1:
+                time.sleep(2 ** attempt)
+            else:
+                logger.warning(f"Failed to click {locator}: {e}")
+    return False
+
 def log_inquiry_to_dynamodb(message_text, intent, response_text):
     """
     Logs the processed inquiry to the AWS DynamoDB table for auditing and analytics.
@@ -54,7 +80,7 @@ def run_dm_scraper():
             page.set_default_timeout(Config.PLAYWRIGHT_TIMEOUT)
 
             logger.info("Navigating to Instagram Direct Inbox...")
-            page.goto("https://www.instagram.com/direct/inbox/")
+            page.goto(SELECTORS["INBOX_URL"])
             
             # Wait a moment to see if we get redirected to the login page
             page.wait_for_load_state("domcontentloaded")
@@ -63,26 +89,14 @@ def run_dm_scraper():
                 logger.error("Redirected to login page. Session cookies are missing or expired. Please run 'python3 main.py login' to re-authenticate.")
                 return
             
-            # Instagram often intercepts the inbox route with a 'Save Your Login Info?' 
-            # or 'Turn on Notifications' interstitial page/modal.
-            try:
-                page.locator("nav, text=Not Now, text=Not now").first.wait_for(state="visible", timeout=30000)
-            except Exception:
-                # Try to proceed anyway
-                pass
-                
             # Dismiss potential "Turn on Notifications" or "Save Login Info" modals
-            try:
-                not_now_btn = page.get_by_text(re.compile(r"Not now", re.IGNORECASE))
-                if not_now_btn.count() > 0 and not_now_btn.first.is_visible(timeout=3000):
-                    logger.info("Dismissing 'Not now' popup / interstitial.")
-                    not_now_btn.first.click()
-                    page.wait_for_timeout(3000) # give it time to navigate or close modal
-            except Exception:
-                pass
+            not_now_btn = page.get_by_text(re.compile(SELECTORS["NOT_NOW_BTN"], re.IGNORECASE))
+            if safe_click(page, not_now_btn, timeout=3000):
+                 logger.info("Dismissing 'Not now' popup / interstitial.")
+                 page.wait_for_timeout(3000) # give it time to navigate or close modal
                 
             # Now we must strictly wait for the main interface layout indicating the inbox is loaded
-            page.wait_for_selector("nav, [role='navigation'], a[href='/']", state="visible")
+            page.wait_for_selector(SELECTORS["INBOX_NAV"], state="visible")
             
             
             logger.info("Scanning recent threads for unreplied messages...")
@@ -90,7 +104,7 @@ def run_dm_scraper():
             
             for cycle_i in range(Config.MAX_DMS_PER_CYCLE):
                 # Always requery the threads as navigating back to inbox refreshes the DOM
-                all_threads = page.locator("a[href^='/direct/t/']")
+                all_threads = page.locator(SELECTORS["THREAD_LINKS"])
                 count = all_threads.count()
                 
                 if count == 0:
@@ -118,7 +132,7 @@ def run_dm_scraper():
                     
                     found_unreplied = True
                     logger.info(f"Found unreplied message at thread index {thread_idx}.")
-                    thread.click()
+                    safe_click(page, thread)
                     break # Break out of scanning loop and process this thread
                     
                 if not found_unreplied:
@@ -128,16 +142,16 @@ def run_dm_scraper():
                 processed_count += 1
                 
                 # Wait for the message history window to load
-                message_input = page.locator("div[aria-label='Message']")
+                message_input = page.locator(SELECTORS["MESSAGE_INPUT"])
                 message_input.wait_for(state="visible")
                 
                 # Scrape the latest messages
-                messages = page.locator("div[dir='auto']").all_inner_texts()
+                messages = page.locator(SELECTORS["MESSAGE_TEXTS"]).all_inner_texts()
                 if not messages:
                     logger.warning("Clicked thread but could not extract message text.")
-                    page.goto("https://www.instagram.com/direct/inbox/")
+                    page.goto(SELECTORS["INBOX_URL"])
                     page.wait_for_timeout(2000)
-                    page.wait_for_selector("nav, [role='navigation'], a[href='/']", state="visible")
+                    page.wait_for_selector(SELECTORS["INBOX_NAV"], state="visible")
                     continue
                     
                 latest_msg_text = messages[-1]
@@ -165,9 +179,9 @@ def run_dm_scraper():
                     time.sleep(2)
                     
                 # Navigate back to inbox for the next iteration
-                page.goto("https://www.instagram.com/direct/inbox/")
+                page.goto(SELECTORS["INBOX_URL"])
                 page.wait_for_timeout(2000)
-                page.wait_for_selector("nav, [role='navigation'], a[href='/']", state="visible")
+                page.wait_for_selector(SELECTORS["INBOX_NAV"], state="visible")
 
         except Exception as e:
             logger.error(f"Error during DM scraping automation: {e}", exc_info=True)

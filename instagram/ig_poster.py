@@ -13,6 +13,39 @@ from config import Config, setup_logger
 
 logger = setup_logger("instagram.ig_poster")
 
+SELECTORS = {
+    "INBOX_NAV": "nav, [role='navigation'], a[href='/']",
+    "NEW_POST_LINK": "New post|Create",
+    "NEW_POST_SVG": "svg[aria-label='New post'], svg[aria-label='Create']",
+    "DIALOG": "div[role='dialog']",
+    "POST_MENU": "Post",
+    "FILE_INPUT": "input[type='file']",
+    "SELECT_FILE_BTN": "Select from computer|Select files",
+    "NEXT_BTN": "Next",
+    "OK_BTN": "OK",
+    "CAPTION_INPUT": "div[aria-label='Write a caption...']",
+    "CAPTION_PLACEHOLDER": "Write a caption...",
+    "SHARE_BTN": "Share",
+    "SUCCESS_MSG": "Your post has been shared."
+}
+
+def safe_click(page, locator, timeout=3000, retries=2):
+    for attempt in range(retries):
+        try:
+            if isinstance(locator, str):
+                el = page.locator(locator).first
+            else:
+                el = locator.first
+            el.wait_for(state="visible", timeout=timeout)
+            el.click()
+            return True
+        except Exception as e:
+            if attempt < retries - 1:
+                time.sleep(2 ** attempt)
+            else:
+                logger.warning(f"Failed to click {locator}: {e}")
+    return False
+
 def upload_post(image_path, caption):
     with sync_playwright() as p:
         try:
@@ -31,26 +64,22 @@ def upload_post(image_path, caption):
             page.goto("https://www.instagram.com/")
             
             # Use explicit selectors instead of random sleep
-            page.wait_for_selector("nav", state="visible") 
+            # Use explicitly configured selector instead of random sleep
+            page.wait_for_selector(SELECTORS["INBOX_NAV"], state="visible") 
             
             logger.info(f"Starting post process for {image_path}...")
             
             # 1. Click "New post" (Create)
-            try:
-                page.get_by_role("link", name=re.compile(r"New post|Create", re.IGNORECASE)).click()
-            except:
-                page.locator("svg[aria-label='New post'], svg[aria-label='Create']").first.click()
+            if not safe_click(page, page.get_by_role("link", name=re.compile(SELECTORS["NEW_POST_LINK"], re.IGNORECASE))):
+                logger.info("Fallback: clicking SVG icon for New Post.")
+                safe_click(page, SELECTORS["NEW_POST_SVG"])
             
             # Wait for modal to appear
-            page.wait_for_selector("div[role='dialog']", state="visible")
+            page.wait_for_selector(SELECTORS["DIALOG"], state="visible")
             
             # Instagram sometimes shows a menu (Post, Story, Reel, Live) before the modal
-            try:
-                post_menu = page.get_by_role("menuitem", name="Post")
-                if post_menu.count() > 0 and post_menu.is_visible(timeout=3000):
-                    post_menu.click()
-            except:
-                pass
+            post_menu = page.get_by_role("menuitem", name=SELECTORS["POST_MENU"])
+            safe_click(page, post_menu)
             
             logger.info(f"Resolving absolute path for {image_path}")
             abs_image_path = os.path.abspath(image_path)
@@ -58,45 +87,37 @@ def upload_post(image_path, caption):
                 raise FileNotFoundError(f"File not found: {abs_image_path}")
 
             # 2. Upload file
-            file_input = page.locator("input[type='file']")
+            file_input = page.locator(SELECTORS["FILE_INPUT"])
             if file_input.count() > 0:
                 logger.info("Using direct input file upload.")
                 file_input.first.set_input_files(abs_image_path)
             else:
                 logger.info("Using expect_file_chooser upload.")
                 with page.expect_file_chooser() as fc_info:
-                    page.get_by_role("button", name=re.compile(r"Select from computer|Select files", re.IGNORECASE)).click()
+                    safe_click(page, page.get_by_role("button", name=re.compile(SELECTORS["SELECT_FILE_BTN"], re.IGNORECASE)))
                 file_chooser = fc_info.value
                 file_chooser.set_files(abs_image_path)
                 
             # Wait until image preview renders in the modal (Next button appears)
-            page.get_by_role("button", name="Next").wait_for(state="visible")
+            page.get_by_role("button", name=SELECTORS["NEXT_BTN"]).wait_for(state="visible")
             
             # Check for video reels popup: "Video posts are now shared as Reels."
-            try:
-                ok_btn = page.get_by_role("button", name="OK", exact=True)
-                if ok_btn.count() > 0 and ok_btn.first.is_visible(timeout=2000):
-                    logger.info("Dismissing Video to Reels OK popup.")
-                    ok_btn.first.click()
-            except Exception:
-                pass
-
+            ok_btn = page.get_by_role("button", name=SELECTORS["OK_BTN"], exact=True)
+            safe_click(page, ok_btn, timeout=2000)
             
             # 3. Click "Next" (Crop screen)
-            next_btn = page.get_by_role("button", name="Next")
-            next_btn.wait_for(state="visible")
-            next_btn.click()
+            next_btn = page.get_by_role("button", name=SELECTORS["NEXT_BTN"])
+            safe_click(page, next_btn)
             
             # Wait for filter screen to load and Next to be interactable again
-            # We explicitly wait for the Next button to be visible again instead of networkidle
-            page.get_by_role("button", name="Next").wait_for(state="visible")
+            page.get_by_role("button", name=SELECTORS["NEXT_BTN"]).wait_for(state="visible")
             
             # 4. Click "Next" (Filter screen)
-            page.get_by_role("button", name="Next").click()
+            safe_click(page, page.get_by_role("button", name=SELECTORS["NEXT_BTN"]))
             
             # Wait for the caption input area to exist
-            caption_input = page.locator("div[aria-label='Write a caption...']")
-            caption_placeholder = page.get_by_placeholder("Write a caption...")
+            caption_input = page.locator(SELECTORS["CAPTION_INPUT"])
+            caption_placeholder = page.get_by_placeholder(SELECTORS["CAPTION_PLACEHOLDER"])
             
             try:
                 caption_input.wait_for(state="visible", timeout=5000)
@@ -110,11 +131,11 @@ def upload_post(image_path, caption):
             logger.info("Caption inserted.")
             
             # 6. Click "Share"
-            page.get_by_role("button", name="Share", exact=True).click()
+            safe_click(page, page.get_by_role("button", name=SELECTORS["SHARE_BTN"], exact=True))
             
             # Wait for success message
             logger.info("Waiting for post to upload to Instagram servers...")
-            page.get_by_text("Your post has been shared.").wait_for(state="visible", timeout=60000)
+            page.get_by_text(SELECTORS["SUCCESS_MSG"]).wait_for(state="visible", timeout=60000)
             logger.info("Post shared successfully!")
             
         except Exception as e:

@@ -22,7 +22,8 @@ RUN yum install -y \
     libxshmfence \
     alsa-lib \
     mesa-libgbm \
-    unzip
+    unzip \
+    && yum clean all
 
 # Set the working directory to the Lambda task root
 WORKDIR ${LAMBDA_TASK_ROOT}
@@ -38,6 +39,5 @@ RUN playwright install chromium --with-deps
 # Copy all project files into the container
 COPY . .
 
-# Set the Lambda handler
-# This assumes you add a 'lambda_handler' function to your main.py
-CMD [ "main.lambda_handler" ] 
+# Set the Lambda handler mapping for AWS invocation
+CMD ["main.lambda_handler"]

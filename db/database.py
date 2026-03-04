@@ -5,13 +5,16 @@
 
 import json
 import boto3
+from cachetools import cached, TTLCache
 from config import Config, setup_logger
 
 logger = setup_logger("db.database")
 
+@cached(cache=TTLCache(maxsize=10, ttl=600))
 def get_product_context(filter_category=None):
     """
     Loads the product list from AWS DynamoDB.
+    Leverages a 10-minute in-memory TTLCache to eliminate full-table scans.
     Optionally filters by category to save LLM context window tokens.
     """
     try:

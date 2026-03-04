@@ -16,10 +16,17 @@ class Config:
     GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") or GOOGLE_API_KEY
     
+    if not GEMINI_API_KEY:
+        raise ValueError("CRITICAL: GEMINI_API_KEY or GOOGLE_API_KEY is missing from environment. Cannot start HypeMind without AI capabilities.")
+    
     # AWS Settings
     S3_BUCKET = os.environ.get("S3_BUCKET_NAME", "hypemind-assets")
+    if not S3_BUCKET:
+        raise ValueError("CRITICAL: S3_BUCKET_NAME is missing. Cannot boot application without S3 access.")
+        
     PRODUCTS_TABLE = os.environ.get("DYNAMODB_PRODUCTS", "HypeMindProducts")
     INQUIRIES_TABLE = os.environ.get("DYNAMODB_INQUIRIES", "HypeMindInquiries")
+    LOCKS_TABLE = os.environ.get("DYNAMODB_LOCKS", "HypeMindLocks")
     
     # Paths
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))

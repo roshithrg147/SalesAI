@@ -6,6 +6,7 @@
 import json
 from google import genai
 from pydantic import ValidationError
+from google.api_core import exceptions as google_exceptions
 
 from db.models import AgentDecision
 from db.database import get_product_context
@@ -77,8 +78,29 @@ USER MESSAGE: "{user_text}"
             response_text="Hold on, let me grab a human for you.",
             needs_human=True
         )
+    except google_exceptions.ResourceExhausted as e:
+        logger.error(f"Gemini API Quota Exceeded: {e}")
+        return AgentDecision(
+            intent="quota_error",
+            response_text="We're experiencing high volume right now. I'm routing you to a human agent.",
+            needs_human=True
+        )
+    except google_exceptions.ServiceUnavailable as e:
+        logger.error(f"Gemini API Service Unavailable: {e}")
+        return AgentDecision(
+            intent="api_unavailable",
+            response_text="Our AI service is temporarily down, connecting you to a human.",
+            needs_human=True
+        )
     except Exception as e:
         logger.error(f"Gemini API failure: {e}", exc_info=True)
+        # Catch-all for new SDK APIError or other networking issues
+        if "429" in str(e) or "Quota" in str(e):
+             return AgentDecision(
+                 intent="quota_error",
+                 response_text="We're experiencing high volume right now. I'm routing you to a human agent.",
+                 needs_human=True
+             )
         return AgentDecision(
             intent="api_error",
             response_text="Our system is resting right now, I'll flag a human to respond shortly.",

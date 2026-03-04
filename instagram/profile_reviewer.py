@@ -4,6 +4,9 @@ import json
 from playwright.sync_api import sync_playwright
 from google import genai
 from db.database import get_product_context
+from config import setup_logger
+
+logger = setup_logger("instagram.profile_reviewer")
 
 def extract_profile_data(username: str) -> dict:
     profile_data = {"username": username}
@@ -17,7 +20,7 @@ def extract_profile_data(username: str) -> dict:
         )
         
         page = context.new_page()
-        print(f"Loading profile for @{username}...")
+        logger.info(f"Loading profile for @{username}...")
         page.goto(f"https://www.instagram.com/{username}/")
         
         # Wait for either the profile header to load or a "Page not found" indicator.
@@ -27,7 +30,7 @@ def extract_profile_data(username: str) -> dict:
             page.wait_for_selector('header', timeout=10000)
             page.wait_for_timeout(3000) # give it a moment to stabilize
         except Exception as e:
-            print(f"Could not load profile or header not found: {e}")
+            logger.error(f"Could not load profile or header not found: {e}")
             page.screenshot(path="profile_error.png")
             context.close()
             return None
@@ -41,14 +44,14 @@ def extract_profile_data(username: str) -> dict:
         except Exception:
             profile_data["raw_header_text"] = "Not found"
             
-        print("Scraping completed.")
+        logger.info("Scraping completed.")
         context.close()
         
     return profile_data
 
 def review_profile(profile_data: dict):
     if not profile_data:
-        print("No profile data to review.")
+        logger.warning("No profile data to review.")
         return
 
     api_key = os.environ.get("GOOGLE_API_KEY")
@@ -94,23 +97,23 @@ Here is the scraped raw text from the Instagram header for @{profile_data['usern
 Please provide your review.
 """
 
-    print("Sending profile data to Gemini for review...")
+    logger.info("Sending profile data to Gemini for review...")
     try:
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=[prompt]
         )
-        print("\n--- PROFILE REVIEW ---\n")
-        print(response.text)
+        logger.info("\n--- PROFILE REVIEW ---\n")
+        logger.info(response.text)
         
         # Optionally save to file
         report_filename = f"{profile_data['username']}_review.md"
         with open(report_filename, "w") as f:
             f.write(response.text)
-        print(f"\nReview saved to {report_filename}")
+        logger.info(f"\nReview saved to {report_filename}")
         
     except Exception as e:
-        print(f"Error generating review: {e}")
+        logger.error(f"Error generating review: {e}")
 
 
 if __name__ == "__main__":
@@ -119,4 +122,4 @@ if __name__ == "__main__":
         data = extract_profile_data(username)
         review_profile(data)
     else:
-        print("Usage: python3 profile_reviewer.py <instagram_username>")
+        logger.error("Usage: python3 profile_reviewer.py <instagram_username>")

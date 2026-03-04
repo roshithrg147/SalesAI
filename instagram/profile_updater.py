@@ -1,6 +1,9 @@
 import sys
 import time
 from playwright.sync_api import sync_playwright
+from config import setup_logger
+
+logger = setup_logger("instagram.profile_updater")
 
 def update_aesthetic():
     """
@@ -16,7 +19,7 @@ def update_aesthetic():
         )
         
         page = context.new_page()
-        print("Loading Edit Profile page...")
+        logger.info("Loading Edit Profile page...")
         page.goto("https://www.instagram.com/accounts/edit/")
         
         try:
@@ -28,37 +31,37 @@ def update_aesthetic():
             name_input = page.get_by_placeholder("Name", exact=False).first
             if name_input.count() > 0:
                 name_input.fill("Roshith | Streetwear & Jackets")
-                print("Filled Name.")
+                logger.info("Filled Name.")
             else:
-                print("Could not find Name input.")
+                logger.warning("Could not find Name input.")
 
             # Bio Update
             bio_input = page.get_by_placeholder("Bio", exact=False).first
             if bio_input.count() > 0:
                 bio_input.fill("urban industrial wear. \\nworldwide shipping 🌍\\nlink below to shop.")
-                print("Filled Bio.")
+                logger.info("Filled Bio.")
             else:
                 bio_box = page.get_by_role("textbox", name="Bio")
                 if bio_box.count() > 0:
                     bio_box.fill("urban industrial wear. \\nworldwide shipping 🌍\\nlink below to shop.")
-                    print("Filled Bio via role.")
+                    logger.info("Filled Bio via role.")
                 else:
-                    print("Could not find Bio input.")
+                    logger.warning("Could not find Bio input.")
             
             # Save Profile
             save_button = page.get_by_role("button", name="Submit").first
             if save_button.count() > 0:
                 save_button.click()
-                print("Profile updated successfully with new aesthetic!")
+                logger.info("Profile updated successfully with new aesthetic!")
             else:
-                print("Could not find Save button.")
+                logger.warning("Could not find Save button.")
                 
             page.wait_for_timeout(3000)
             
         except Exception as e:
-            print(f"Error updating profile: {e}")
+            logger.error(f"Error updating profile: {e}")
             page.screenshot(path="aesthetic_error.png")
-            print("Screenshot saved to aesthetic_error.png")
+            logger.info("Screenshot saved to aesthetic_error.png")
             
         context.close()
 

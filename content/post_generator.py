@@ -10,13 +10,14 @@ import time
 import uuid
 import tempfile
 import boto3
+from botocore.exceptions import ClientError, BotoCoreError
 from google import genai
 from db.database import get_product_context
 from config import Config, setup_logger
 
 logger = setup_logger("content.post_generator")
 
-def draft_post():
+def draft_post(download_dir=None):
     api_key = Config.GEMINI_API_KEY
     if not api_key:
         raise ValueError("GEMINI_API_KEY not found in environment. Please set it.")
@@ -27,7 +28,17 @@ def draft_post():
     s3_client = boto3.client('s3')
     
     try:
-        response = s3_client.list_objects_v2(Bucket=bucket_name)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = s3_client.list_objects_v2(Bucket=bucket_name)
+                break
+            except (ClientError, BotoCoreError) as e:
+                if attempt == max_retries - 1:
+                    raise e
+                logger.warning(f"S3 list_objects_v2 failed (attempt {attempt+1}/{max_retries}): {e}. Retrying...")
+                time.sleep(2 ** attempt)
+                
         if 'Contents' not in response:
             logger.error(f"S3 Bucket {bucket_name} is empty or inaccessible.")
             return None, None
@@ -45,14 +56,24 @@ def draft_post():
         
     random_img_key = random.choice(unique_files)
     
-    # Download to standard ephemeral /tmp storage
-    temp_dir = os.path.join(tempfile.gettempdir(), "hypemind")
+    # Download to provided or standard ephemeral /tmp storage
+    temp_dir = download_dir if download_dir else tempfile.gettempdir()
     os.makedirs(temp_dir, exist_ok=True)
     temp_img_path = os.path.join(temp_dir, f"{uuid.uuid4()}_{os.path.basename(random_img_key)}")
     
     try:
         logger.info(f"Downloading {random_img_key} from S3...")
-        s3_client.download_file(bucket_name, random_img_key, temp_img_path)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                s3_client.download_file(bucket_name, random_img_key, temp_img_path)
+                break
+            except (ClientError, BotoCoreError) as e:
+                if attempt == max_retries - 1:
+                    raise e
+                logger.warning(f"S3 download failed (attempt {attempt+1}/{max_retries}): {e}. Retrying...")
+                time.sleep(2 ** attempt)
+                
         logger.info(f"Image saved temporarily to {temp_img_path}")
     except Exception as e:
         logger.error(f"Failed to download image from S3: {e}")
@@ -132,7 +153,7 @@ Return ONLY valid JSON.
             
             # We return the temp file path instead of the S3 key, 
             # so the poster can upload it directly. 
-            # Cleanup is now the responsibility of the caller (scheduler or CLI).
+            # Cleanup is handled by TemporaryDirectory in the caller context.
             return temp_img_path, data
             
         except Exception as e:

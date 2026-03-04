@@ -2,6 +2,9 @@ import sys
 import logging
 from playwright.sync_api import sync_playwright
 import json
+from config import setup_logger
+
+logger = setup_logger("dump_inbox")
 
 def dump_inbox_threads():
     with sync_playwright() as p:
@@ -26,7 +29,7 @@ def dump_inbox_threads():
         with open("inbox_dump.json", "w") as f:
             json.dump(results, f, indent=2)
             
-        print(f"Dumped {len(results)} threads to inbox_dump.json")
+        logger.info(f"Dumped {len(results)} threads to inbox_dump.json")
         context.close()
 
 if __name__ == "__main__":
