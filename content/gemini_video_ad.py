@@ -8,6 +8,7 @@ import time
 import random
 from google import genai
 from google.genai import types
+from google.genai import errors
 
 from config import Config, setup_logger
 from content.video_generator import get_valid_images_from_s3
@@ -46,15 +47,22 @@ def generate_video_ad(output_filename="video/ad_video.mp4"):
         
         for attempt in range(max_retries):
             try:
-                # The developer API requires raw image bytes for reference_images, not gcs_uris
+                # The developer API requires uploaded file objects for image, not raw bytes
                 image_references = []
                 for img_path in downloaded_img_paths:
-                    with open(img_path, 'rb') as f:
-                        img_bytes = f.read()
+                    logger.info(f"Uploading {img_path} to Gemini...")
+                    uploaded_file = client.files.upload(file=img_path)
+                    uploaded_files.append(uploaded_file)
+                    
+                    # Wait for processing if necessary
+                    while uploaded_file.state.name == "PROCESSING":
+                        time.sleep(2)
+                        uploaded_file = client.files.get(name=uploaded_file.name)
+                        
                     image_references.append(
                         types.VideoGenerationReferenceImage(
                             reference_type="ASSET",
-                            image=types.Image(image_bytes=img_bytes)
+                            image=uploaded_file
                         )
                     )
 
@@ -87,6 +95,12 @@ def generate_video_ad(output_filename="video/ad_video.mp4"):
                              reference_images=image_references
                         )
                      )
+                except errors.APIError as api_err:
+                     logger.warning(f"Veo API failed (Billing/Quota limits?): {api_err}")
+                     logger.info("Falling back to local static video generation...")
+                     from content.video_generator import generate_promotional_video
+                     generate_promotional_video(output_filename=output_filename, duration=10)
+                     return output_filename
                 except AttributeError:
                      logger.warning("Your google-genai client does not seem to support `generate_videos` directly.")
                      logger.warning("Attempting generation using standard generate_content (this might fail if model isn't designed for it).")

@@ -18,10 +18,12 @@ logger = setup_logger("instagram.dm_scraper")
 
 SELECTORS = {
     "INBOX_URL": "https://www.instagram.com/direct/inbox/",
-    "INBOX_NAV": "nav, [role='navigation'], a[href='/']",
+    "INBOX_NAV": "svg[aria-label='Direct'], svg[aria-label='Messages'], svg[aria-label='Messenger'], section[role='main']",
     "NOT_NOW_BTN": "Not Now|Not now",
-    "THREAD_LINKS": "a[href^='/direct/t/']",
-    "MESSAGE_INPUT": "div[aria-label='Message']",
+    "THREAD_LINKS": "div[role='button']:has(span[title])",
+    # Note: MESSAGE_INPUT etc. remain here but we've mostly been debugging THREAD_LINKS and INBOX_NAV
+    "MESSAGE_INPUT": "div[role='textbox']",
+    "SEND_BUTTON": "div[role='button']:has-text('Send')",
     "MESSAGE_TEXTS": "div[dir='auto']"
 }
 
@@ -51,14 +53,14 @@ def log_inquiry_to_dynamodb(message_text, intent, response_text):
         table = dynamodb.Table(Config.INQUIRIES_TABLE)
         
         item = {
-            'id': str(uuid.uuid4()),
+            'inquiry_id': str(uuid.uuid4()),
             'timestamp': datetime.utcnow().isoformat(),
             'message_text': message_text,
             'intent': intent,
             'response_text': response_text if response_text else "FLAGGED_FOR_HUMAN"
         }
         table.put_item(Item=item)
-        logger.info(f"Successfully logged inquiry {item['id']} to DynamoDB.")
+        logger.info(f"Successfully logged inquiry {item['inquiry_id']} to DynamoDB.")
     except Exception as e:
         # We don't want a DB logging failure to crash the whole application loop
         logger.error(f"Failed to log inquiry to DynamoDB: {e}", exc_info=True)
@@ -93,17 +95,18 @@ def run_dm_scraper():
             not_now_btn = page.get_by_text(re.compile(SELECTORS["NOT_NOW_BTN"], re.IGNORECASE))
             if safe_click(page, not_now_btn, timeout=3000):
                  logger.info("Dismissing 'Not now' popup / interstitial.")
-                 page.wait_for_timeout(3000) # give it time to navigate or close modal
+                 page.wait_for_timeout(6000) # give it time to navigate or close modal
                 
             # Now we must strictly wait for the main interface layout indicating the inbox is loaded
-            page.wait_for_selector(SELECTORS["INBOX_NAV"], state="visible")
+            page.wait_for_selector(SELECTORS["INBOX_NAV"], state="visible", timeout=15000)
             
             
             logger.info("Scanning recent threads for unreplied messages...")
             processed_count = 0
             
             for cycle_i in range(Config.MAX_DMS_PER_CYCLE):
-                # Always requery the threads as navigating back to inbox refreshes the DOM
+                # Wait for the inbox list to be visible before locating threads
+                page.wait_for_selector(SELECTORS["THREAD_LINKS"], state="visible", timeout=15000)
                 all_threads = page.locator(SELECTORS["THREAD_LINKS"])
                 count = all_threads.count()
                 
@@ -115,6 +118,7 @@ def run_dm_scraper():
                 
                 # We check the top 15 threads maximum so we don't scan too far back
                 scan_limit = min(count, 15)
+                logger.debug(f"Cycle {cycle_i + 1}: Found {count} threads. Scanning top {scan_limit}...")
                 
                 for thread_idx in range(scan_limit):
                     thread = all_threads.nth(thread_idx)
@@ -122,16 +126,34 @@ def run_dm_scraper():
                         # Wait slightly if the text isn't fully rendered yet
                         thread.wait_for(state="visible", timeout=1000)
                         text = thread.inner_text()
-                    except Exception:
+                        logger.debug(f"Thread {thread_idx} text preview: '{text.replace(os.linesep, ' ')}'")
+                    except Exception as e:
+                        logger.debug(f"Skipping thread {thread_idx} due to read error: {e}")
                         continue
                         
-                    # Check if we already replied to this thread
-                    # Usually indicated by "You:" or "You sent" in the preview text
-                    if "You:" in text or "You sent" in text:
+                    # Ignore "Notes" feature which appears as a list item at the top
+                    if "Your note" in text or "Ask friends anything" in text:
+                        logger.debug(f"Skipping thread {thread_idx}: It's a 'Note' not a DM.")
                         continue
+                        
+                    # 1. Check if the thread has an unread indicator (usually a blue dot)
+                    # Instagram uses span classes or aria-labels for "Unread", but in the new layout it actually has an invisible element with text='Unread'
+                    unread_text_matches = thread.locator("text='Unread'").count() > 0
+                    unread_aria_matches = thread.locator("xpath=.//*[contains(@aria-label, 'Unread')]").count() > 0
+                    is_unread_indicator = unread_text_matches or unread_aria_matches
                     
+                    # 2. Check if we already replied to this thread
+                    # Usually indicated by "You:" or "You sent" in the preview text
+                    replied_heuristics = ["You:", "You sent", "Sent"]
+                    is_replied = any(h in text for h in replied_heuristics)
+                    
+                    if is_replied and not is_unread_indicator:
+                        logger.debug(f"Skipping thread {thread_idx}: Appears replied to.")
+                        continue
+                        
+                    # Let's consider it unreplied if it has an unread indicator OR it doesn't look like we sent the last message
                     found_unreplied = True
-                    logger.info(f"Found unreplied message at thread index {thread_idx}.")
+                    logger.info(f"==> Found active/unreplied message at thread index {thread_idx}.")
                     safe_click(page, thread)
                     break # Break out of scanning loop and process this thread
                     
@@ -151,7 +173,7 @@ def run_dm_scraper():
                     logger.warning("Clicked thread but could not extract message text.")
                     page.goto(SELECTORS["INBOX_URL"])
                     page.wait_for_timeout(2000)
-                    page.wait_for_selector(SELECTORS["INBOX_NAV"], state="visible")
+                    page.wait_for_selector(SELECTORS["INBOX_NAV"], state="visible", timeout=15000)
                     continue
                     
                 latest_msg_text = messages[-1]
@@ -181,7 +203,7 @@ def run_dm_scraper():
                 # Navigate back to inbox for the next iteration
                 page.goto(SELECTORS["INBOX_URL"])
                 page.wait_for_timeout(2000)
-                page.wait_for_selector(SELECTORS["INBOX_NAV"], state="visible")
+                page.wait_for_selector(SELECTORS["INBOX_NAV"], state="visible", timeout=15000)
 
         except Exception as e:
             logger.error(f"Error during DM scraping automation: {e}", exc_info=True)

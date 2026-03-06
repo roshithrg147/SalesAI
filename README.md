@@ -59,6 +59,16 @@ HypeMind operates as an **Event-Driven Serverless Application**.
 2.  AWS Account with configured credentials and required permissions (Lambda, S3, DynamoDB, EventBridge).
 3.  Google Gemini API Key.
 
+### Environment Setup
+
+Ensure you install all core dependencies (including `boto3` for AWS integrations):
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
 ### Environment Variables (`.env` or AWS Lambda Environment)
 
 ```env

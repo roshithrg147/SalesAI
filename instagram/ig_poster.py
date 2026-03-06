@@ -14,7 +14,7 @@ from config import Config, setup_logger
 logger = setup_logger("instagram.ig_poster")
 
 SELECTORS = {
-    "INBOX_NAV": "nav, [role='navigation'], a[href='/']",
+    "INBOX_NAV": "svg[aria-label='Direct'], svg[aria-label='Messages'], svg[aria-label='Messenger'], section[role='main']",
     "NEW_POST_LINK": "New post|Create",
     "NEW_POST_SVG": "svg[aria-label='New post'], svg[aria-label='Create']",
     "DIALOG": "div[role='dialog']",
@@ -26,10 +26,10 @@ SELECTORS = {
     "CAPTION_INPUT": "div[aria-label='Write a caption...']",
     "CAPTION_PLACEHOLDER": "Write a caption...",
     "SHARE_BTN": "Share",
-    "SUCCESS_MSG": "Your post has been shared."
+    "SUCCESS_MSG": "Your post has been shared.|Your reel has been shared."
 }
 
-def safe_click(page, locator, timeout=3000, retries=2):
+def safe_click(page, locator, timeout=3000, retries=2, optional=False):
     for attempt in range(retries):
         try:
             if isinstance(locator, str):
@@ -43,7 +43,8 @@ def safe_click(page, locator, timeout=3000, retries=2):
             if attempt < retries - 1:
                 time.sleep(2 ** attempt)
             else:
-                logger.warning(f"Failed to click {locator}: {e}")
+                if not optional:
+                    logger.warning(f"Failed to click {locator}: {e}")
     return False
 
 def upload_post(image_path, caption):
@@ -63,9 +64,9 @@ def upload_post(image_path, caption):
             logger.info("Opening Instagram...")
             page.goto("https://www.instagram.com/")
             
-            # Use explicit selectors instead of random sleep
-            # Use explicitly configured selector instead of random sleep
-            page.wait_for_selector(SELECTORS["INBOX_NAV"], state="visible") 
+            # Wait for DOM to parse and specific Inbox icon to load
+            page.wait_for_load_state("domcontentloaded")
+            page.wait_for_selector(SELECTORS["INBOX_NAV"], state="visible", timeout=15000) 
             
             logger.info(f"Starting post process for {image_path}...")
             
@@ -79,7 +80,7 @@ def upload_post(image_path, caption):
             
             # Instagram sometimes shows a menu (Post, Story, Reel, Live) before the modal
             post_menu = page.get_by_role("menuitem", name=SELECTORS["POST_MENU"])
-            safe_click(page, post_menu)
+            safe_click(page, post_menu, optional=True, retries=1)
             
             logger.info(f"Resolving absolute path for {image_path}")
             abs_image_path = os.path.abspath(image_path)
@@ -99,18 +100,18 @@ def upload_post(image_path, caption):
                 file_chooser.set_files(abs_image_path)
                 
             # Wait until image preview renders in the modal (Next button appears)
-            page.get_by_role("button", name=SELECTORS["NEXT_BTN"]).wait_for(state="visible")
+            page.get_by_role("button", name=SELECTORS["NEXT_BTN"]).wait_for(state="visible", timeout=90000)
             
             # Check for video reels popup: "Video posts are now shared as Reels."
             ok_btn = page.get_by_role("button", name=SELECTORS["OK_BTN"], exact=True)
-            safe_click(page, ok_btn, timeout=2000)
+            safe_click(page, ok_btn, timeout=2000, optional=True, retries=1)
             
             # 3. Click "Next" (Crop screen)
             next_btn = page.get_by_role("button", name=SELECTORS["NEXT_BTN"])
             safe_click(page, next_btn)
             
             # Wait for filter screen to load and Next to be interactable again
-            page.get_by_role("button", name=SELECTORS["NEXT_BTN"]).wait_for(state="visible")
+            page.get_by_role("button", name=SELECTORS["NEXT_BTN"]).wait_for(state="visible", timeout=90000)
             
             # 4. Click "Next" (Filter screen)
             safe_click(page, page.get_by_role("button", name=SELECTORS["NEXT_BTN"]))
@@ -135,7 +136,7 @@ def upload_post(image_path, caption):
             
             # Wait for success message
             logger.info("Waiting for post to upload to Instagram servers...")
-            page.get_by_text(SELECTORS["SUCCESS_MSG"]).wait_for(state="visible", timeout=60000)
+            page.get_by_text(re.compile(SELECTORS["SUCCESS_MSG"], re.IGNORECASE)).wait_for(state="visible", timeout=60000)
             logger.info("Post shared successfully!")
             
         except Exception as e:

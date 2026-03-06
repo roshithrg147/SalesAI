@@ -30,7 +30,7 @@ class Config:
     
     # Paths
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    IMG_DIR = os.environ.get("IMG_DIR", os.path.join(BASE_DIR, "/home/norwing/Pictures/Download/Img-20260302T042252Z-1-001"))
+    IMG_DIR = os.environ.get("IMG_DIR", os.path.join(BASE_DIR, "assets", "images"))
     
     # SECURITY NOTE: In AWS/production (Lambda/EC2), IG_SESSION_DIR is synced using S3 zip extraction.
     # It must be mounted to a writable location like /tmp/ig_session

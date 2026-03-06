@@ -1,10 +1,14 @@
-# Use the official AWS Lambda Python base image
-FROM public.ecr.aws/lambda/python:3.11
+# 1. Base Image: Amazon Linux 2023 / Python 3.12
+FROM public.ecr.aws/lambda/python:3.12
 
-# Install system dependencies required for Playwright and Chromium
-# These are necessary for the browser to render headlessly in the Lambda environment
-RUN yum install -y \
+# 2. Install all required C-compilers and Playwright system dependencies via dnf
+RUN dnf install -y \
+    gcc \
+    gcc-c++ \
+    alsa-lib \
     atk \
+    at-spi2-atk \
+    at-spi2-core \
     cups-libs \
     gtk3 \
     libXcomposite \
@@ -16,28 +20,28 @@ RUN yum install -y \
     libXScrnSaver \
     libXtst \
     pango \
-    at-spi2-atk \
     libdrm \
-    libgbm \
-    libxshmfence \
-    alsa-lib \
+    libxkbcommon \
+    nss \
+    xorg-x11-server-Xvfb \
     mesa-libgbm \
-    unzip \
-    && yum clean all
+    unzip
 
-# Set the working directory to the Lambda task root
+# 3. Set the working directory to the Lambda task root
 WORKDIR ${LAMBDA_TASK_ROOT}
 
-# Copy requirements and install Python dependencies
+# 4. Copy requirements and upgrade pip
 COPY requirements.txt .
+RUN pip install --upgrade pip
+
+# 5. Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright and the Chromium browser binary
-# We only install chromium to keep the image size smaller
-RUN playwright install chromium --with-deps
+# 6. Install ONLY the Chromium browser (DO NOT use --with-deps here!)
+RUN playwright install chromium
 
-# Copy all project files into the container
+# 7. Copy your actual project code into the container
 COPY . .
 
-# Set the Lambda handler mapping for AWS invocation
-CMD ["main.lambda_handler"]
+# 8. Set the exact Lambda execution entry point
+CMD [ "main.lambda_handler" ]

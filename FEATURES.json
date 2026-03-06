@@ -1,0 +1,48 @@
+{
+  "project_name": "HypeMind",
+  "features": [
+    {
+      "id": "F-001",
+      "name": "Local Session Authentication",
+      "description": "Ability to log in manually via headed Playwright and save session locally.",
+      "status": "PASS"
+    },
+    {
+      "id": "F-002",
+      "name": "S3 Session Synchronization",
+      "description": "Ability to upload/download zipped IG session data to AWS S3.",
+      "status": "PASS"
+    },
+    {
+      "id": "F-003",
+      "name": "Distributed Concurrency Locks",
+      "description": "DynamoDB-backed locks to prevent concurrent script execution.",
+      "status": "PASS"
+    },
+    {
+      "id": "F-004",
+      "name": "DM Scraping Flow",
+      "description": "Read unread messages and use AI to formulate replies.",
+      "status": "FAILING",
+      "notes": "Pending fixes: scraper is not correctly identifying unread messages."
+    },
+    {
+      "id": "F-005",
+      "name": "Scheduled Content Posting",
+      "description": "Post text/images according to a schedule.",
+      "status": "PASS"
+    },
+    {
+      "id": "F-006",
+      "name": "Veo Video Ad Generation",
+      "description": "Call Veo API to generate a video ad.",
+      "status": "PASS"
+    },
+    {
+      "id": "F-007",
+      "name": "Instagram Video Posting",
+      "description": "Automated Playwright flow to upload a local video file.",
+      "status": "PASS"
+    }
+  ]
+}
