@@ -28,9 +28,10 @@ def run_test():
         try:
             logger.info("Launching Chrome...")
             context = p.chromium.launch_persistent_context(
-                user_data_dir="/tmp/ig_session",
-                headless=True,
-                args=["--disable-notifications"]
+                user_data_dir=Config.IG_SESSION_DIR,
+                executable_path=Config.PLAYWRIGHT_EXEC_PATH,
+                headless=Config.PLAYWRIGHT_HEADLESS,
+                args=["--disable-notifications", "--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--single-process"]
             )
             page = context.new_page()
             page.set_default_timeout(15000)

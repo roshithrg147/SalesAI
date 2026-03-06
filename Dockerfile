@@ -37,11 +37,17 @@ RUN pip install --upgrade pip
 # 5. Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 6. Install ONLY the Chromium browser (DO NOT use --with-deps here!)
-RUN playwright install chromium
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# 6. Install Playwright and force Chromium into the global path
+RUN pip install playwright && \
+    playwright install chromium --with-deps
 
 # 7. Copy your actual project code into the container
-COPY . .
+COPY . ${LAMBDA_TASK_ROOT}
+
+# Set permissions (Crucial for Lambda execution)
+RUN chmod -R 755 /ms-playwright
 
 # 8. Set the exact Lambda execution entry point
 CMD [ "main.lambda_handler" ]

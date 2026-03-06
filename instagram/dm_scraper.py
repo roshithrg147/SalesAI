@@ -75,8 +75,9 @@ def run_dm_scraper():
             logger.info("Launching Playwright for DM Scraper...")
             context = p.chromium.launch_persistent_context(
                 user_data_dir=Config.IG_SESSION_DIR,
+                executable_path=Config.PLAYWRIGHT_EXEC_PATH,
                 headless=Config.PLAYWRIGHT_HEADLESS,
-                args=["--disable-notifications"]
+                args=["--disable-notifications", "--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--single-process"]
             )
             page = context.pages[0] if context.pages else context.new_page()
             page.set_default_timeout(Config.PLAYWRIGHT_TIMEOUT)

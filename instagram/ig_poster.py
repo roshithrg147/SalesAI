@@ -53,8 +53,9 @@ def upload_post(image_path, caption):
             # We use standard bundled Chromium now instead of host Chrome per CTO audit
             context = p.chromium.launch_persistent_context(
                 user_data_dir=Config.IG_SESSION_DIR,
+                executable_path=Config.PLAYWRIGHT_EXEC_PATH,
                 headless=Config.PLAYWRIGHT_HEADLESS,
-                args=["--disable-notifications"]
+                args=["--disable-notifications", "--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--single-process"]
             )
             page = context.new_page()
             

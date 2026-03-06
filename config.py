@@ -45,6 +45,7 @@ class Config:
     MAX_DMS_PER_CYCLE = int(os.environ.get("MAX_DMS_PER_CYCLE", "5"))
     
     # Playwright Settings
+    PLAYWRIGHT_EXEC_PATH = os.environ.get("PLAYWRIGHT_EXEC_PATH", "/ms-playwright/chromium-1208/chrome-linux64/chrome")
     PLAYWRIGHT_HEADLESS = os.environ.get("PLAYWRIGHT_HEADLESS", "False").lower() in ('true', '1', 't')
     PLAYWRIGHT_TIMEOUT = int(os.environ.get("PLAYWRIGHT_TIMEOUT", "60000"))
 

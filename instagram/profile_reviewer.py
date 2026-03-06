@@ -4,7 +4,7 @@ import json
 from playwright.sync_api import sync_playwright
 from google import genai
 from db.database import get_product_context
-from config import setup_logger
+from config import Config, setup_logger
 
 logger = setup_logger("instagram.profile_reviewer")
 
@@ -14,9 +14,10 @@ def extract_profile_data(username: str) -> dict:
     with sync_playwright() as p:
         # Launch with existing session
         context = p.chromium.launch_persistent_context(
-            user_data_dir="./ig_session",
+            user_data_dir=Config.IG_SESSION_DIR,
+            executable_path=Config.PLAYWRIGHT_EXEC_PATH,
             headless=False,
-            args=["--disable-notifications"]
+            args=["--disable-notifications", "--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--single-process"]
         )
         
         page = context.new_page()

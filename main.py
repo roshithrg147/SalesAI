@@ -171,7 +171,9 @@ def login_and_save() -> None:
     with sync_playwright() as p:
         context = p.chromium.launch_persistent_context(
             user_data_dir=Config.IG_SESSION_DIR,
-            headless=False
+            executable_path=Config.PLAYWRIGHT_EXEC_PATH,
+            headless=False,
+            args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--single-process"]
         )
         
         page = context.new_page()
