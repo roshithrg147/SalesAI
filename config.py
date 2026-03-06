@@ -5,7 +5,17 @@
 
 import os
 import logging
+import glob
 from dotenv import load_dotenv
+
+def get_chromium_path():
+    # Search for the chrome executable in the ms-playwright directory
+    paths = glob.glob("/ms-playwright/chromium-*/chrome-linux64/chrome")
+    if paths:
+        return paths[0]
+    # Fallback to standard path if glob fails
+    return "/ms-playwright/chromium-1208/chrome-linux64/chrome"
+
 
 # Load environment variables from .env file if present
 load_dotenv()
@@ -45,7 +55,7 @@ class Config:
     MAX_DMS_PER_CYCLE = int(os.environ.get("MAX_DMS_PER_CYCLE", "5"))
     
     # Playwright Settings
-    PLAYWRIGHT_EXEC_PATH = os.environ.get("PLAYWRIGHT_EXEC_PATH", "/ms-playwright/chromium-1208/chrome-linux64/chrome")
+    PLAYWRIGHT_EXEC_PATH = os.environ.get("PLAYWRIGHT_EXEC_PATH", get_chromium_path())
     PLAYWRIGHT_HEADLESS = os.environ.get("PLAYWRIGHT_HEADLESS", "False").lower() in ('true', '1', 't')
     PLAYWRIGHT_TIMEOUT = int(os.environ.get("PLAYWRIGHT_TIMEOUT", "60000"))
 

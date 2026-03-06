@@ -11,10 +11,10 @@
 - **Error**: Playwright crashed in Docker/Lambda because it looked for the browser executable in the dynamic user cache (`/home/sbx_user...`) instead of a globally accessible path, and lacked necessary container sandbox flags.
 - **Root Cause**: The Dockerfile installed Chromium without system dependencies and didn't set global read/execute permissions. Python scripts launched Playwright without specifying the explicit `executable_path` and required Lambda flags (`--disable-dev-shm-usage`, `--single-process`).
 - **Fix**:
-  - Updated `Dockerfile` to use `playwright install chromium --with-deps` and `chmod -R 755 /ms-playwright`.
-  - Centralized `PLAYWRIGHT_EXEC_PATH` in `config.py` using standard Linux Playwright path `/ms-playwright/chromium-1208/chrome-linux64/chrome`.
+  - Updated `Dockerfile` to use `playwright install chromium` (omitting `--with-deps` since they were manually installed via system packages in Step 2) and `chmod -R 755 /ms-playwright`.
+  - Centralized `PLAYWRIGHT_EXEC_PATH` in `config.py` using a dynamic `glob` search (`/ms-playwright/chromium-*/chrome-linux64/chrome`) to automatically handle Chromium version upgrades.
   - Updated all Python scripts to use `executable_path` and the required Lambda Chromium arguments during `launch_persistent_context`.
-- **Key Insight**: When deploying Playwright to AWS Lambda or strict Docker containers, always decouple the browser binary from the user cache. Install it globally with system dependencies (`--with-deps`), enforce `755` permissions, and explicitly pass the path and container-safe sandbox arguments during Context launch.
+- **Key Insight**: When deploying Playwright to AWS Lambda or strict Docker containers, always decouple the browser binary from the user cache. Install it globally with custom-controlled system dependencies, enforce `755` permissions, and explicitly pass the container-safe sandbox arguments. Use dynamic path resolution (`glob`) rather than hardcoding binary version folders.
 
 ## [2026-03-06] - Instagram Video Posting Timeout (Success Dialog)
 

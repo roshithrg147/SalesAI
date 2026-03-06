@@ -39,9 +39,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# 6. Install Playwright and force Chromium into the global path
+# 6. Install Playwright and Chromium.
+# We REMOVE --with-deps because we handled them manually in Step 2.
 RUN pip install playwright && \
-    playwright install chromium --with-deps
+    playwright install chromium
 
 # 7. Copy your actual project code into the container
 COPY . ${LAMBDA_TASK_ROOT}
