@@ -19,8 +19,8 @@ logger = setup_logger("instagram.dm_scraper")
 SELECTORS = {
     "INBOX_URL": "https://www.instagram.com/direct/inbox/",
     "INBOX_NAV": "svg[aria-label='Direct'], svg[aria-label='Messages'], svg[aria-label='Messenger'], section[role='main']",
-    "NOT_NOW_BTN": "Not Now|Not now",
-    "THREAD_LINKS": "div[role='button']:has(span[title])",
+    "NOT_NOW_BTN": "Not Now|Not now|Save Info",
+    "THREAD_LINKS": "a[href^='/direct/t/']",
     # Note: MESSAGE_INPUT etc. remain here but we've mostly been debugging THREAD_LINKS and INBOX_NAV
     "MESSAGE_INPUT": "div[role='textbox']",
     "SEND_BUTTON": "div[role='button']:has-text('Send')",
@@ -65,6 +65,23 @@ def log_inquiry_to_dynamodb(message_text, intent, response_text):
         # We don't want a DB logging failure to crash the whole application loop
         logger.error(f"Failed to log inquiry to DynamoDB: {e}", exc_info=True)
 
+def dismiss_modals(page):
+    """
+    Modal Buster: Clears 'Not Now' or 'Save Login Info' popups immediately after navigating.
+    Loops to catch stacked or delayed modals.
+    """
+    logger.info("Running Modal Buster...")
+    for _ in range(3):
+        try:
+            not_now_btn = page.get_by_text(re.compile(SELECTORS["NOT_NOW_BTN"], re.IGNORECASE))
+            if safe_click(page, not_now_btn, timeout=2500):
+                logger.info("Dismissed a 'Not Now' or 'Save Info' popup.")
+                page.wait_for_timeout(3000)
+            else:
+                break
+        except Exception:
+            break
+
 def run_dm_scraper():
     """
     Playwright scraper that logs into the Instagram Direct Inbox, reads the 
@@ -92,11 +109,8 @@ def run_dm_scraper():
                 logger.error("Redirected to login page. Session cookies are missing or expired. Please run 'python3 main.py login' to re-authenticate.")
                 return
             
-            # Dismiss potential "Turn on Notifications" or "Save Login Info" modals
-            not_now_btn = page.get_by_text(re.compile(SELECTORS["NOT_NOW_BTN"], re.IGNORECASE))
-            if safe_click(page, not_now_btn, timeout=3000):
-                 logger.info("Dismissing 'Not now' popup / interstitial.")
-                 page.wait_for_timeout(6000) # give it time to navigate or close modal
+            # Modal Buster implementation to clear popups blocking the inbox
+            dismiss_modals(page)
                 
             # Now we must strictly wait for the main interface layout indicating the inbox is loaded
             page.wait_for_selector(SELECTORS["INBOX_NAV"], state="visible", timeout=15000)

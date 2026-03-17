@@ -53,4 +53,4 @@ def get_product_context(filter_category=None):
         
     except Exception as e:
         logger.error(f"Failed to load products database from AWS DynamoDB: {e}")
-        return "Warning: Product context unavailable."
+        return "Catalog Out of Sync"
