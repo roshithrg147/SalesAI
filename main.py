@@ -145,6 +145,35 @@ def post_scheduled_content() -> None:
         sync_session_to_s3()
         release_lock(lock_name)
 
+def post_video_ad_content() -> None:
+    """Executes the video ad generation and posting flow, protected by a distributed lock."""
+    lock_name = "video_ad_poster_lock"
+    # Ad generation can take longer with video limits, giving 15 mins lock timeout
+    if not acquire_lock(lock_name, timeout_seconds=900):
+        logger.info("Video ad poster already running in another instance. Exiting.")
+        return
+        
+    try:
+        sync_session_from_s3()
+        # Imports done here to prevent heavy load strictly on other lambdas
+        from content.gemini_video_ad import generate_video_ad
+        from instagram.ig_poster import upload_post
+        
+        video_file = generate_video_ad("video/ad_video.mp4")
+        if video_file:
+            caption = "Elevate your streetwear game. 🌟 Crisp, clean, and built for the city. Tap the link in our bio! #StreetwearIndia #Luxurystreetwear #OOTD #FreshDrops"
+            logger.info(f"Video {video_file} complete. Automatically posting to Instagram...")
+            upload_post(video_file, caption)
+            if os.path.exists(video_file):
+                os.remove(video_file)
+                logger.info(f"Cleaned up {video_file}")
+        else:
+            logger.warning("Video ad generation returned None. Nothing to post.")
+            
+    finally:
+        sync_session_to_s3()
+        release_lock(lock_name)
+
 def lambda_handler(event, context) -> dict:
     """
     AWS Lambda entry point. Standardized for event-driven execution.
@@ -158,6 +187,9 @@ def lambda_handler(event, context) -> dict:
     elif action == 'post_scheduled':
         post_scheduled_content()
         return {"statusCode": 200, "body": "Scheduled posting successful"}
+    elif action == 'post_video_ad':
+        post_video_ad_content()
+        return {"statusCode": 200, "body": "Scheduled video ad posting successful"}
     else:
         logger.error(f"Unknown or missing action in event: {action}")
         return {"statusCode": 400, "body": "Unknown action"}

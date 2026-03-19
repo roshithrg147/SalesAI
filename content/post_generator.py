@@ -14,6 +14,7 @@ from botocore.exceptions import ClientError, BotoCoreError
 from google import genai
 from db.database import get_product_context
 from config import Config, setup_logger
+from core.state_manager import get_posting_state, save_posting_state
 
 logger = setup_logger("content.post_generator")
 
@@ -54,7 +55,23 @@ def draft_post(download_dir=None):
     if not unique_files:
         raise ValueError(f"No valid images found in S3 bucket {bucket_name}")
         
-    random_img_key = random.choice(unique_files)
+    # Implement tracking to avoid repeats
+    state = get_posting_state()
+    used_images = state.get("used_images_posts", [])
+    
+    available_files = [f for f in unique_files if f not in used_images]
+    
+    # Reset if all images have been used
+    if not available_files:
+        logger.info("All images have been used for posts! Resetting the tracked list.")
+        available_files = unique_files
+        state["used_images_posts"] = []
+        
+    random_img_key = random.choice(available_files)
+    
+    # Mark as used and save state
+    state.setdefault("used_images_posts", []).append(random_img_key)
+    save_posting_state(state)
     
     # Download to provided or standard ephemeral /tmp storage
     temp_dir = download_dir if download_dir else tempfile.gettempdir()

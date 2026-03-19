@@ -14,6 +14,7 @@ import time
 import boto3
 from botocore.exceptions import ClientError, BotoCoreError
 from config import Config, setup_logger
+from core.state_manager import get_posting_state, save_posting_state
 
 logger = setup_logger("content.video_generator")
 
@@ -52,7 +53,29 @@ def get_valid_images_from_s3(required_count=15, download_dir=None):
     temp_dir = download_dir if download_dir else tempfile.gettempdir()
     os.makedirs(temp_dir, exist_ok=True)
     
-    selected_keys = random.sample(unique_files, min(len(unique_files), required_count))
+    # Implement tracking to avoid repeats for video generation
+    state = get_posting_state()
+    used_images = state.get("used_images_videos", [])
+    
+    available_files = [f for f in unique_files if f not in used_images]
+    
+    selected_keys = []
+    
+    while len(selected_keys) < required_count:
+        if not available_files:
+            logger.info("All images have been used for videos! Resetting the tracked list.")
+            state["used_images_videos"] = []
+            available_files = [f for f in unique_files if f not in selected_keys]
+            if not available_files:
+                break # No unique files at all
+                
+        img = random.choice(available_files)
+        selected_keys.append(img)
+        available_files.remove(img)
+        
+    # Mark as used and save state
+    state.setdefault("used_images_videos", []).extend(selected_keys)
+    save_posting_state(state)
     downloaded_paths = []
     
     for key in selected_keys:
