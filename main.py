@@ -72,7 +72,7 @@ def sync_session_from_s3() -> None:
         
         # Ensure target dir exists and is clear from previous runs
         if os.path.exists(Config.IG_SESSION_DIR):
-            shutil.rmtree(Config.IG_SESSION_DIR)
+            shutil.rmtree(Config.IG_SESSION_DIR, ignore_errors=True)
         os.makedirs(Config.IG_SESSION_DIR, exist_ok=True)
         
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
