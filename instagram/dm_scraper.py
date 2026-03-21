@@ -158,14 +158,13 @@ def run_dm_scraper():
                     is_unread_indicator = unread_text_matches or unread_aria_matches
                     
                     # 2. Check if we already replied to this thread
-                    # Usually indicated by "You:" or "You sent" in the preview text
-                    replied_heuristics = ["You:", "You sent", "Sent"]
-                    is_replied = any(h in text for h in replied_heuristics)
+                    # Narrowed heuristics to avoid matching "I just sent" from customers
+                    is_replied = text.startswith("You:") or text.startswith("You sent")
                     
                     if is_replied and not is_unread_indicator:
                         logger.debug(f"Skipping thread {thread_idx}: Appears replied to.")
                         continue
-                        
+                    
                     # Let's consider it unreplied if it has an unread indicator OR it doesn't look like we sent the last message
                     found_unreplied = True
                     logger.info(f"==> Found active/unreplied message at thread index {thread_idx}.")
@@ -183,16 +182,31 @@ def run_dm_scraper():
                 message_input.wait_for(state="visible")
                 
                 # Scrape the latest messages
-                messages = page.locator(SELECTORS["MESSAGE_TEXTS"]).all_inner_texts()
-                if not messages:
-                    logger.warning("Clicked thread but could not extract message text.")
+                # Logic Fix: We only want INCOMING messages. 
+                # Outgoing messages on IG web usually have a parent container with 'justify-content: flex-end'
+                # or a specific class. We'll use a locator to filter for 'left-aligned' containers.
+                all_msg_locators = page.locator(SELECTORS["MESSAGE_TEXTS"]).all()
+                incoming_messages = []
+                
+                for msg_loc in all_msg_locators:
+                    try:
+                        # Heuristic: Incoming messages are usually not in a flex-end container
+                        # This is a safe check for the standard IG web layout
+                        is_outgoing = msg_loc.evaluate("el => window.getComputedStyle(el.parentElement.parentElement).justifyContent === 'flex-end'")
+                        if not is_outgoing:
+                            incoming_messages.append(msg_loc.inner_text())
+                    except:
+                        incoming_messages.append(msg_loc.inner_text())
+
+                if not incoming_messages:
+                    logger.warning("Clicked thread but could not find any incoming messages.")
                     page.goto(SELECTORS["INBOX_URL"])
                     page.wait_for_timeout(2000)
                     page.wait_for_selector(SELECTORS["INBOX_NAV"], state="visible", timeout=15000)
                     continue
                     
-                latest_msg_text = messages[-1]
-                logger.info(f"Latest incoming message: '{latest_msg_text}'")
+                latest_msg_text = incoming_messages[-1]
+                logger.info(f"Latest incoming customer message: '{latest_msg_text}'")
                 
                 # Pass to SalesAI Brain
                 logger.info("Querying SalesAI Brain...")

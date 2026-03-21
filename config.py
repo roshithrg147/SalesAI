@@ -54,6 +54,11 @@ class Config:
     POLL_INTERVAL_SECONDS = int(os.environ.get("POLL_INTERVAL_SECONDS", "300"))
     MAX_DMS_PER_CYCLE = int(os.environ.get("MAX_DMS_PER_CYCLE", "5"))
     
+    # AI Backend Selection (GEMINI or OLLAMA)
+    AI_BACKEND = os.environ.get("AI_BACKEND", "GEMINI").upper()
+    OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+    OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2:3b")
+
     # Playwright Settings
     PLAYWRIGHT_EXEC_PATH = os.environ.get("PLAYWRIGHT_EXEC_PATH") or get_chromium_path()
     PLAYWRIGHT_HEADLESS = os.environ.get("PLAYWRIGHT_HEADLESS", "False").lower() in ('true', '1', 't')
